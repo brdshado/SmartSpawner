@@ -1,3 +1,6 @@
+# Configuration version – do not modify this value
+config_version: 1.6.6
+
 # TIME FORMAT GUIDE
 # Simple formats: 20s (20 seconds), 5m (5 minutes), 1h (1 hour)
 # Complex format: 1d_2h_30m_15s (1 day, 2 hours, 30 minutes, 15 seconds)
@@ -13,10 +16,10 @@
 #               Language Settings
 #---------------------------------------------------
 # Language setting (available: en_US, vi_VN, de_DE, en_US_DonutSMP, en_US_DonutSMP_v2)
-language: en_US
+language: en_US_DonutSMP_v2
 
 # Spawner GUI layout configuration (available: default, DonutSMP, DonutSMP_v2)
-gui_layout: default
+gui_layout: DonutSMP
 
 # Enable or disable debug mode (provides verbose console output)
 debug: false
@@ -50,7 +53,7 @@ spawner_break:
   enabled: true         # Master switch for spawner breaking feature
 
   # Whether to directly add spawner items to player inventory instead of dropping them on the ground
-  direct_to_inventory: false
+  direct_to_inventory: true
 
   # Tool Requirements - Which tools can break spawners
   required_tools:
@@ -87,7 +90,7 @@ natural_spawner:
   spawn_mobs: true
 
   # Whether natural spawner block will be protected from explosions
-  protect_from_explosions: false
+  protect_from_explosions: true
 
 #---------------------------------------------------
 #                Economy Settings
@@ -139,7 +142,7 @@ custom_economy:
 
   # Custom sell price configuration
   custom_prices:
-    enabled: true
+    enabled: false
     # Path to custom item prices file
     price_file_name: "item_prices.yml"
 
@@ -171,7 +174,7 @@ bedrock_support:
 #---------------------------------------------------
 # Configure visual indicators and effects for spawners
 hologram:
-  enabled: false        # Show floating text above spawners
+  enabled: true        # Show floating text above spawners
 
   # Position Offset from spawner block center
   offset_x: 0.5
@@ -203,7 +206,7 @@ logging:
   json_format: false
   
   # Also output logs to console (useful for debugging)
-  console_output: false
+  console_output: true
   
   # Directory where log files are stored (relative to plugin folder)
   log_directory: "logs"
