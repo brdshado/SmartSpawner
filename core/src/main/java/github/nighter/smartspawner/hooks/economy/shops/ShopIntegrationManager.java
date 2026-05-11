@@ -8,6 +8,7 @@ import github.nighter.smartspawner.hooks.economy.shops.providers.excellentshop.E
 import github.nighter.smartspawner.hooks.economy.shops.providers.shopguiplus.ShopGuiPlusProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.shopguiplus.SpawnerHook;
 import github.nighter.smartspawner.hooks.economy.shops.providers.zshop.ZShopProvider;
+import github.nighter.smartspawner.hooks.economy.shops.providers.bharatmcshop.BharatMCShopProvider;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Material;
 import org.bukkit.plugin.Plugin;
@@ -83,6 +84,7 @@ public class ShopIntegrationManager {
 
         // registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
         registerProviderIfAvailable("ExcellentShop", () -> new ExcellentShopProvider(plugin));
+        registerProviderIfAvailable("BharatMC-Shop", () -> new BharatMCShopProvider(plugin));
     }
 
     private boolean tryRegisterSpecificProvider(String providerName) {
@@ -130,6 +132,12 @@ public class ShopIntegrationManager {
                 case "excellentshop":
                     if (isPluginAvailable("ExcellentShop")) {
                         registerProviderIfAvailable("ExcellentShop", () -> new ExcellentShopProvider(plugin));
+                        return !availableProviders.isEmpty();
+                    }
+                    break;
+                case "bharatmc-shop":
+                    if (isPluginAvailable("BharatMC-Shop")) {
+                        registerProviderIfAvailable("BharatMC-Shop", () -> new BharatMCShopProvider(plugin));
                         return !availableProviders.isEmpty();
                     }
                     break;

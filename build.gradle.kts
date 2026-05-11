@@ -13,6 +13,7 @@ allprojects {
     version = "1.6.6"
 
     repositories {
+        mavenLocal()
         mavenCentral()
         maven {
             name = "papermc-repo"
