@@ -135,7 +135,7 @@ custom_economy:
     enabled: true
     # Supported shop plugins: auto, EconomyShopGUI, EconomyShopGUI-Premium, ShopGUIPlus, zShop, ExcellentShop
     # 'auto' will attempt to detect your installed shop plugin automatically
-    preferred_plugin: auto
+    preferred_plugin: bharatmc-shop
 
   # Custom sell price configuration
   custom_prices:
