@@ -482,6 +482,26 @@ bedrock:
       view_info: Bilgileri Gör
       back: Geri
 
+# Kullanılabilir değişkenler (spawner_info_item ile aynı):
+    # Kullanılabilir değişkenler:
+    # {entity}           - Biçimlendirilmiş yaratık adı (örn: "Zombie")
+    # {ᴇɴᴛɪᴛʏ}           - Küçük büyük harfle yaratık adı (örn: "ᴢᴏᴍʙɪᴇ")
+    # {stack_size}       - Bu konumda üst üste yığılmış spawner sayısı
+    # {range}            - Blok cinsinden doğma mesafesi
+    # {delay}            - Saniye cinsinden doğma gecikmesi
+    # {min_mobs}         - Tek seferde doğabilecek minimum yaratık sayısı
+    # {max_mobs}         - Tek seferde doğabilecek maksimum yaratık sayısı
+    # {current_items}    - Depolanan mevcut eşya sayısı
+    # {max_items}        - Maksimum eşya depolama kapasitesi
+    # {percent_storage_rounded}  - Depo kullanım yüzdesi, tamsayı (örn: "87")
+    # {percent_storage_decimal} - Depo kullanım yüzdesi, ondalıklı (örn: "87.5")
+    # {current_exp}      - Depolanan mevcut deneyim, virgüllü (örn: "1,000")
+    # {max_exp}          - Maksimum deneyim kapasitesi, virgüllü
+    # {raw_current_exp}  - Biçimlendirilmemiş mevcut deneyim sayısı
+    # {raw_max_exp}      - Biçimlendirilmemiş maksimum deneyim sayısı
+    # {percent_exp_rounded}      - Deneyim deposu kullanım yüzdesi, tamsayı
+    # {percent_exp_decimal}    - Deneyim deposu kullanım yüzdesi, ondalıklı (örn: "42.7")
+
     # ÖNEMLİ: Yalnızca Bedrock uyumlu renk kodlarını kullanın:
     # §0=Siyah, §1=Koyu Mavi, §2=Koyu Yeşil, §3=Koyu Turkuaz, §4=Koyu Kırmızı, §5=Koyu Mor
     # §6=Altın, §7=Gri, §8=Koyu Gri, §9=Mavi, §a=Yeşil, §b=Turkuaz, §c=Kırmızı
