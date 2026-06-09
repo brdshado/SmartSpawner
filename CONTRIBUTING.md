@@ -4,6 +4,8 @@ Thank you for your interest in contributing to SmartSpawner. We welcome contribu
 
 Our goal is to keep SmartSpawner fast, maintainable, and extensible. The guidelines below help ensure that contributions align with those goals.
 
+---
+
 ## Project Principles
 
 ### Performance-Oriented Design
