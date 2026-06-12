@@ -91,7 +91,7 @@ public class SpawnerMenuFormUI {
             title = languageManager.getGuiTitle("bedrock.main_gui.title_single_spawner", placeholders);
         }
 
-        GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
+        GuiLayout layout = plugin.getGuiLayoutConfig().getMainLayout(spawner, player);
         List<ButtonInfo> availableButtons = collectAvailableButtons(layout, player, placeholders);
 
         if (availableButtons.isEmpty()) {

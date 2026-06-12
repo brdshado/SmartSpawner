@@ -5,6 +5,7 @@ import github.nighter.smartspawner.api.events.SpawnerExpClaimEvent;
 import github.nighter.smartspawner.hooks.rpg.AuraSkillsIntegration;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
+import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.gui.stacker.SpawnerStackerUI;
 import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
@@ -95,7 +96,7 @@ public class SpawnerMenuAction implements Listener {
         int slot = event.getRawSlot();
         String clickType = getClickTypeString(event.getClick());
         
-        if (handleLayoutAction(player, spawner, slot, clickType)) {
+        if (handleLayoutAction(holder.getLayout(), player, spawner, slot, clickType)) {
             return;
         }
 
@@ -110,10 +111,8 @@ public class SpawnerMenuAction implements Listener {
         }
     }
 
-    private boolean handleLayoutAction(Player player, SpawnerData spawner, int slot, String clickType) {
-        var layoutConfig = plugin.getGuiLayoutConfig();
-        var layout = layoutConfig.getCurrentMainLayout();
-        
+    private boolean handleLayoutAction(GuiLayout layout, Player player, SpawnerData spawner,
+                                       int slot, String clickType) {
         if (layout == null) {
             return false;
         }
@@ -203,7 +202,7 @@ public class SpawnerMenuAction implements Listener {
     }
 
     public void handleStorageClick(Player player, SpawnerData spawner) {
-        Inventory pageInventory = spawnerStorageUI.createStorageInventory(spawner, 1, -1);
+        Inventory pageInventory = spawnerStorageUI.createStorageInventory(player, spawner, 1, -1);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
         player.openInventory(pageInventory);
     }

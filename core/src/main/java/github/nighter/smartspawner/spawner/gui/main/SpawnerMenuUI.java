@@ -115,8 +115,8 @@ public class SpawnerMenuUI {
             }
         }
 
-        Inventory menu = createMenu(spawner);
-        GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
+        GuiLayout layout = plugin.getGuiLayoutConfig().getMainLayout(spawner, player);
+        Inventory menu = createMenu(spawner, layout);
 
         // OPTIMIZATION: Populate menu items based on layout configuration
         // Iterate through ALL buttons in layout and create items based on their actions
@@ -183,7 +183,7 @@ public class SpawnerMenuUI {
         }
     }
 
-    private Inventory createMenu(SpawnerData spawner) {
+    private Inventory createMenu(SpawnerData spawner, GuiLayout layout) {
         // Get entity name with caching - for item spawners, use item name
         String entityName;
         if (spawner.isItemSpawner()) {
@@ -206,7 +206,7 @@ public class SpawnerMenuUI {
             title = languageManager.getGuiTitle("gui_title_main.single_spawner", placeholders);
         }
 
-        return Bukkit.createInventory(new SpawnerMenuHolder(spawner), INVENTORY_SIZE, title);
+        return Bukkit.createInventory(new SpawnerMenuHolder(spawner, layout), INVENTORY_SIZE, title);
     }
 
     public ItemStack createLootStorageItem(SpawnerData spawner, GuiButton button) {

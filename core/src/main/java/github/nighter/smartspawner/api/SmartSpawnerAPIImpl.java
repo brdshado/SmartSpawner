@@ -3,6 +3,9 @@ package github.nighter.smartspawner.api;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.api.data.SpawnerDataDTO;
 import github.nighter.smartspawner.api.data.SpawnerDataModifier;
+import github.nighter.smartspawner.api.gui.GuiLayoutRegistry;
+import github.nighter.smartspawner.api.gui.GuiLayoutRegistryImpl;
+import github.nighter.smartspawner.api.gui.SpawnerGuiLayoutProvider;
 import github.nighter.smartspawner.api.impl.SpawnerDataModifierImpl;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.interactions.destroy.SpawnerRemovalService;
@@ -32,12 +35,15 @@ public class SmartSpawnerAPIImpl implements SmartSpawnerAPI {
     private final SpawnerItemFactory itemFactory;
     private final SpawnerManager spawnerManager;
     private final SpawnerRemovalService spawnerRemovalService;
+    private final GuiLayoutRegistryImpl guiLayoutRegistry;
+    private volatile SpawnerGuiLayoutProvider spawnerGuiLayoutProvider;
 
     public SmartSpawnerAPIImpl(SmartSpawner plugin) {
         this.plugin = plugin;
         this.itemFactory = new SpawnerItemFactory(plugin);
         this.spawnerManager = plugin.getSpawnerManager();
         this.spawnerRemovalService = plugin.getSpawnerRemovalService();
+        this.guiLayoutRegistry = plugin.getGuiLayoutRegistry();
     }
 
     @Override
@@ -184,7 +190,7 @@ public class SmartSpawnerAPIImpl implements SmartSpawnerAPI {
     @Override
     public List<SpawnerDataDTO> getAllSpawners() {
         return spawnerManager.getAllSpawners().stream()
-                .map(this::convertToDTO)
+                .map(SmartSpawnerAPIImpl::convertToDTO)
                 .collect(Collectors.toList());
     }
 
@@ -226,13 +232,39 @@ public class SmartSpawnerAPIImpl implements SmartSpawnerAPI {
         return spawnerRemovalService.removeSpawner(spawnerData);
     }
 
+    @Override
+    public GuiLayoutRegistry getLayoutRegistry() {
+        return guiLayoutRegistry;
+    }
+
+    @Override
+    public void setSpawnerLayoutProvider(SpawnerGuiLayoutProvider provider) {
+        this.spawnerGuiLayoutProvider = provider;
+        plugin.getGuiLayoutConfig().setProvider(provider);
+    }
+
+    @Override
+    public void clearSpawnerLayoutProvider() {
+        this.spawnerGuiLayoutProvider = null;
+        plugin.getGuiLayoutConfig().setProvider(null);
+    }
+
+    /**
+     * Gets the currently active per-spawner layout provider.
+     *
+     * @return the provider, or null
+     */
+    public SpawnerGuiLayoutProvider getSpawnerLayoutProvider() {
+        return spawnerGuiLayoutProvider;
+    }
+
     /**
      * Converts SpawnerData to SpawnerDataDTO.
      *
      * @param spawnerData the spawner data to convert
      * @return the DTO representation
      */
-    private SpawnerDataDTO convertToDTO(SpawnerData spawnerData) {
+    public static SpawnerDataDTO convertToDTO(SpawnerData spawnerData) {
         return new SpawnerDataDTO(
                 spawnerData.getSpawnerId(),
                 spawnerData.getSpawnerLocation(),

@@ -11,6 +11,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Optional;
 
@@ -110,9 +111,13 @@ public class SpawnerSellConfirmListener implements Listener {
         }
 
         int slot = event.getRawSlot();
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem == null || clickedItem.getType().isAir()) {
+            return;
+        }
 
         // OPTIMIZATION: Get layout once and check action based on clicked slot
-        GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentSellConfirmLayout();
+        GuiLayout layout = confirmHolder.getLayout();
         if (layout == null) {
             player.closeInventory();
             return;
@@ -197,7 +202,7 @@ public class SpawnerSellConfirmListener implements Listener {
             case STORAGE:
                 // Storage GUI works the same for both Java and Bedrock
                 org.bukkit.inventory.Inventory storageInventory = plugin.getSpawnerStorageUI()
-                        .createStorageInventory(spawner, 1, -1);
+                        .createStorageInventory(player, spawner, 1, -1);
                 player.openInventory(storageInventory);
                 break;
         }

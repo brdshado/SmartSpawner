@@ -22,6 +22,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,7 +58,7 @@ public class SpawnerStorageUI {
         this.layoutConfig = plugin.getGuiLayoutConfig();
 
         // Initialize caches with appropriate initial capacity
-        this.staticButtons = new HashMap<>(8);
+        this.staticButtons = new ConcurrentHashMap<>(16);
         this.navigationButtonCache = new ConcurrentHashMap<>(16);
         this.pageIndicatorCache = new ConcurrentHashMap<>(16);
 
@@ -89,31 +90,31 @@ public class SpawnerStorageUI {
 
             switch (action) {
                 case "return_main":
-                    staticButtons.put("return", createButtonWithCustomTexture(button, meta -> {
+                    getStaticButton("return", button, meta -> {
                         meta.setDisplayName(languageManager.getGuiItemName("return_button.name"));
                         meta.setLore(languageManager.getGuiItemLoreAsList("return_button.lore"));
-                    }));
+                    });
                     break;
                 case "take_all":
-                    staticButtons.put("takeAll", createButtonWithCustomTexture(button, meta -> {
+                    getStaticButton("takeAll", button, meta -> {
                         meta.setDisplayName(languageManager.getGuiItemName("take_all_button.name"));
                         meta.setLore(languageManager.getGuiItemLoreAsList("take_all_button.lore"));
-                    }));
+                    });
                     break;
                 case "sort_items":
                     // Sort button is created dynamically (material stored for later)
                     break;
                 case "drop_page":
-                    staticButtons.put("dropPage", createButtonWithCustomTexture(button, meta -> {
+                    getStaticButton("dropPage", button, meta -> {
                         meta.setDisplayName(languageManager.getGuiItemName("drop_page_button.name"));
                         meta.setLore(languageManager.getGuiItemLoreAsList("drop_page_button.lore"));
-                    }));
+                    });
                     break;
                 case "open_filter":
-                    staticButtons.put("itemFilter", createButtonWithCustomTexture(button, meta -> {
+                    getStaticButton("itemFilter", button, meta -> {
                         meta.setDisplayName(languageManager.getGuiItemName("item_filter_button.name"));
                         meta.setLore(languageManager.getGuiItemLoreAsList("item_filter_button.lore"));
-                    }));
+                    });
                     break;
                 // Note: Sell buttons are created dynamically to show current total sell price
             }
@@ -196,7 +197,7 @@ public class SpawnerStorageUI {
         return languageManager.getGuiTitle("gui_title_storage", placeholders);
     }
 
-    public Inventory createStorageInventory(SpawnerData spawner, int page, int totalPages) {
+    public Inventory createStorageInventory(Player player, SpawnerData spawner, int page, int totalPages) {
         // Get total pages efficiently
         if (totalPages == -1) {
             totalPages = calculateTotalPages(spawner);
@@ -205,9 +206,11 @@ public class SpawnerStorageUI {
         // Clamp page number to valid range
         page = Math.max(1, Math.min(page, totalPages));
 
+        GuiLayout layout = layoutConfig.getStorageLayout(spawner, player);
+
         // Create inventory with title including page info using placeholder-based format
         Inventory pageInv = Bukkit.createInventory(
-                new StoragePageHolder(spawner, page, totalPages),
+                new StoragePageHolder(spawner, page, totalPages, layout),
                 INVENTORY_SIZE,
                 getStorageTitle(spawner, page, totalPages)
         );
@@ -239,7 +242,9 @@ public class SpawnerStorageUI {
         }
 
         // Also mark all button slots for potential clearing (fixes visual bug where buttons remain when they shouldn't)
-        GuiLayout layout = layoutConfig.getCurrentLayout();
+        StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
+        assert holder != null;
+        GuiLayout layout = holder.getLayout();
         if (layout != null) {
             slotsToEmpty.addAll(layout.getUsedSlots());
         }
@@ -248,7 +253,7 @@ public class SpawnerStorageUI {
         addPageItems(updates, slotsToEmpty, spawner, page);
 
         // Add navigation buttons based on layout
-        addNavigationButtons(updates, spawner, page, totalPages);
+        addNavigationButtons(updates, spawner, page, totalPages, layout);
 
         // Apply all updates in a batch
         for (int slot : slotsToEmpty) {
@@ -267,8 +272,6 @@ public class SpawnerStorageUI {
         }
 
         // Check if we need to update total pages
-        StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
-        assert holder != null;
         int oldUsedSlots = holder.getOldUsedSlots();
         int currentUsedSlots = spawner.getVirtualInventory().getUsedSlots();
 
@@ -310,12 +313,11 @@ public class SpawnerStorageUI {
         }
     }
 
-    private void addNavigationButtons(Map<Integer, ItemStack> updates, SpawnerData spawner, int page, int totalPages) {
+    private void addNavigationButtons(Map<Integer, ItemStack> updates, SpawnerData spawner, int page,
+                                      int totalPages, GuiLayout layout) {
         if (totalPages == -1) {
             totalPages = calculateTotalPages(spawner);
         }
-
-        GuiLayout layout = layoutConfig.getCurrentStorageLayout();
 
         // OPTIMIZATION: Iterate through all buttons and add items based on action
         for (GuiButton button : layout.getAllButtons().values()) {
@@ -355,19 +357,31 @@ public class SpawnerStorageUI {
                     }
                     break;
                 case "take_all":
-                    item = staticButtons.get("takeAll");
+                    item = getStaticButton("takeAll", button, meta -> {
+                        meta.setDisplayName(languageManager.getGuiItemName("take_all_button.name"));
+                        meta.setLore(languageManager.getGuiItemLoreAsList("take_all_button.lore"));
+                    });
                     break;
                 case "sort_items":
                     item = createSortButton(spawner, button);
                     break;
                 case "drop_page":
-                    item = staticButtons.get("dropPage");
+                    item = getStaticButton("dropPage", button, meta -> {
+                        meta.setDisplayName(languageManager.getGuiItemName("drop_page_button.name"));
+                        meta.setLore(languageManager.getGuiItemLoreAsList("drop_page_button.lore"));
+                    });
                     break;
                 case "open_filter":
-                    item = staticButtons.get("itemFilter");
+                    item = getStaticButton("itemFilter", button, meta -> {
+                        meta.setDisplayName(languageManager.getGuiItemName("item_filter_button.name"));
+                        meta.setLore(languageManager.getGuiItemLoreAsList("item_filter_button.lore"));
+                    });
                     break;
                 case "return_main":
-                    item = staticButtons.get("return");
+                    item = getStaticButton("return", button, meta -> {
+                        meta.setDisplayName(languageManager.getGuiItemName("return_button.name"));
+                        meta.setLore(languageManager.getGuiItemLoreAsList("return_button.lore"));
+                    });
                     break;
                 case "sell_all":
                     item = createSellButton(spawner, button);
@@ -427,6 +441,12 @@ public class SpawnerStorageUI {
         }
 
         return item;
+    }
+
+    private ItemStack getStaticButton(String action, GuiButton button, Consumer<ItemMeta> metaModifier) {
+        String cacheKey = action + "|" + button.getMaterial() + "|" + button.getCustomTexture();
+        return staticButtons.computeIfAbsent(
+                cacheKey, ignored -> createButtonWithCustomTexture(button, metaModifier)).clone();
     }
 
     private ItemStack createNavigationButton(String type, int targetPage, GuiButton button) {

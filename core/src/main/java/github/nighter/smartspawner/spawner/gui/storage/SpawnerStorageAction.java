@@ -53,7 +53,6 @@ public class SpawnerStorageAction implements Listener {
     private final Map<UUID, Long> lastControlClickTime = new ConcurrentHashMap<>();
     private static final long ITEM_CLICK_DELAY_MS = 150;
     private static final long CONTROL_CLICK_DELAY_MS = 300;
-    private GuiLayout layout;
 
     public SpawnerStorageAction(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -67,8 +66,7 @@ public class SpawnerStorageAction implements Listener {
     }
 
     public void loadConfig() {
-        GuiLayoutConfig guiLayoutConfig = plugin.getGuiLayoutConfig();
-        layout = guiLayoutConfig.getCurrentLayout();
+        // Layouts are resolved and stored per inventory session.
     }
 
 
@@ -105,8 +103,13 @@ public class SpawnerStorageAction implements Listener {
         }
 
         // Handle control button clicks
-        if (isControlSlot(slot)) {
-            handleControlSlotClick(player, slot, holder, spawner, event.getInventory(), event.getClick(), layout);
+        if (isControlSlot(slot, holder.getLayout())) {
+            ItemStack clickedItem = event.getCurrentItem();
+            if (clickedItem == null || clickedItem.getType() == Material.AIR) {
+                return;
+            }
+            handleControlSlotClick(
+                    player, slot, holder, spawner, event.getInventory(), event.getClick(), holder.getLayout());
         }
     }
 
@@ -246,13 +249,13 @@ public class SpawnerStorageAction implements Listener {
         spawnerMenuUI.openSpawnerMenu(player, spawner, false);
     }
 
-    private boolean isControlSlot(int slot) {
+    private boolean isControlSlot(int slot, GuiLayout layout) {
         return layout != null && layout.isSlotUsed(slot);
     }
 
     private boolean isItemSlot(int slot) {
         // First 45 slots (0-44) are for storage items
-        return slot >= 0 && slot < STORAGE_SLOTS && !isControlSlot(slot);
+        return slot >= 0 && slot < STORAGE_SLOTS;
     }
 
     /**
@@ -738,7 +741,7 @@ public class SpawnerStorageAction implements Listener {
         SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
         int totalPages = calculateTotalPages(spawner);
         final int finalPage = Math.max(1, Math.min(page, totalPages));
-        Inventory pageInventory = spawnerStorageUI.createStorageInventory(spawner, finalPage, totalPages);
+        Inventory pageInventory = spawnerStorageUI.createStorageInventory(player, spawner, finalPage, totalPages);
 
         // Log storage GUI opening
         if (plugin.getSpawnerActionLogger() != null) {

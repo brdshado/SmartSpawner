@@ -83,6 +83,7 @@ export default defineConfig({
 								{ label: 'Validation Methods', slug: 'developer-api/api-validation' },
 								{ label: 'Spawner Data Methods', slug: 'developer-api/api-data-access' },
 								{ label: 'Methods Examples', slug: 'developer-api/api-examples' },
+								{ label: 'GUI layout', slug: 'developer-api/api-gui-layout' },
 							],
 						},
 					],

@@ -1,6 +1,8 @@
 package github.nighter.smartspawner;
 
 import github.nighter.smartspawner.api.*;
+import github.nighter.smartspawner.api.gui.ExternalGuiLayoutLoader;
+import github.nighter.smartspawner.api.gui.GuiLayoutRegistryImpl;
 import github.nighter.smartspawner.bstats.Metrics;
 import github.nighter.smartspawner.commands.BrigadierCommandManager;
 import github.nighter.smartspawner.commands.list.ListSubCommand;
@@ -100,6 +102,8 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
 
     // Factories
     private SpawnerItemFactory spawnerItemFactory;
+    private ExternalGuiLayoutLoader guiLayoutLoader;
+    private GuiLayoutRegistryImpl guiLayoutRegistry;
 
     // Core UI components
     private GuiLayoutConfig guiLayoutConfig;
@@ -272,7 +276,9 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.spawnerLocationLockManager = new SpawnerLocationLockManager(this);
         this.spawnerRemovalService = new SpawnerRemovalService(this);
         this.spawnerManager.reloadAllHolograms();
-        this.guiLayoutConfig = new GuiLayoutConfig(this);
+        this.guiLayoutLoader = new ExternalGuiLayoutLoader(this);
+        this.guiLayoutRegistry = new GuiLayoutRegistryImpl(guiLayoutLoader, getLogger());
+        this.guiLayoutConfig = new GuiLayoutConfig(this, guiLayoutLoader, guiLayoutRegistry);
         this.spawnerStorageUI = new SpawnerStorageUI(this);
         this.filterConfigUI = new FilterConfigUI(this);
         this.spawnerMenuUI = new SpawnerMenuUI(this);
@@ -486,7 +492,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         guiLayoutConfig.reloadLayouts();
         
         // Clear spawner info slot cache since layout may have changed
-        spawnerGuiViewManager.clearSlotCache();
         
         // Clear GUI item cache since layout/config may have changed
         if (spawnerMenuUI != null) {

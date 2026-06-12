@@ -2,6 +2,8 @@ package github.nighter.smartspawner.api;
 
 import github.nighter.smartspawner.api.data.SpawnerDataDTO;
 import github.nighter.smartspawner.api.data.SpawnerDataModifier;
+import github.nighter.smartspawner.api.gui.GuiLayoutRegistry;
+import github.nighter.smartspawner.api.gui.SpawnerGuiLayoutProvider;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
@@ -162,4 +164,24 @@ public interface SmartSpawnerAPI {
      * @return future containing true when removal completed, false if not found or already being modified
      */
     CompletableFuture<Boolean> removeSpawner(Location location);
+
+    /**
+     * Gets the {@link GuiLayoutRegistry} for registering custom GUI layouts.
+     *
+     * @return the layout registry instance
+     */
+    GuiLayoutRegistry getLayoutRegistry();
+
+    /**
+     * Sets a provider to dynamically override GUI layouts on a per-spawner basis.
+     * Only one provider can be active at a time; setting a new one replaces the previous.
+     *
+     * @param provider the layout provider, or null to clear
+     */
+    void setSpawnerLayoutProvider(SpawnerGuiLayoutProvider provider);
+
+    /**
+     * Clears the currently active per-spawner layout provider.
+     */
+    void clearSpawnerLayoutProvider();
 }

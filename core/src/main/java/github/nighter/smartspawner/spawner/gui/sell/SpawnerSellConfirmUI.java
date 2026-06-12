@@ -35,21 +35,13 @@ public class SpawnerSellConfirmUI {
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
 
-    // Cached layout - loaded once for performance
-    private GuiLayout cachedLayout;
-
     public SpawnerSellConfirmUI(SmartSpawner plugin) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
-        loadLayout();
-    }
-
-    private void loadLayout() {
-        this.cachedLayout = plugin.getGuiLayoutConfig().getCurrentSellConfirmLayout();
     }
 
     public void reload() {
-        loadLayout();
+        // No-op: layout is resolved per-context via GuiLayoutConfig
     }
 
     public enum PreviousGui {
@@ -92,26 +84,31 @@ public class SpawnerSellConfirmUI {
 
         // Cache title - no placeholders needed
         String title = languageManager.getGuiTitle("gui_title_sell_confirm", null);
-        Inventory gui = Bukkit.createInventory(new SpawnerSellConfirmHolder(spawner, previousGui, collectExp), GUI_SIZE, title);
+        GuiLayout layout = plugin.getGuiLayoutConfig().getSellConfirmLayout(spawner, player);
+        Inventory gui = Bukkit.createInventory(
+                new SpawnerSellConfirmHolder(spawner, previousGui, collectExp, layout), GUI_SIZE, title);
 
-        populateSellConfirmGui(gui, player, spawner, collectExp);
+        populateSellConfirmGui(gui, player, spawner, collectExp, layout);
 
         player.openInventory(gui);
     }
 
-    private void populateSellConfirmGui(Inventory gui, Player player, SpawnerData spawner, boolean collectExp) {
+    private void populateSellConfirmGui(Inventory gui, Player player, SpawnerData spawner,
+                                        boolean collectExp, GuiLayout layout) {
         // OPTIMIZATION: Create placeholders once and reuse for all buttons
         Map<String, String> placeholders = createPlaceholders(spawner, collectExp);
 
-        // OPTIMIZATION: Use cached layout instead of querying every time
-        if (cachedLayout == null) {
+        if (layout == null) {
             plugin.getLogger().warning("Sell confirm layout not loaded, using empty GUI");
             return;
         }
 
         // Iterate through all buttons in the layout
-        for (GuiButton button : cachedLayout.getAllButtons().values()) {
+        for (GuiButton button : layout.getAllButtons().values()) {
             if (!button.isEnabled()) {
+                continue;
+            }
+            if (button.hasCondition() && !evaluateButtonCondition(button)) {
                 continue;
             }
 
@@ -146,6 +143,14 @@ public class SpawnerSellConfirmUI {
 
             gui.setItem(button.getSlot(), buttonItem);
         }
+    }
+
+    private boolean evaluateButtonCondition(GuiButton button) {
+        return switch (button.getCondition()) {
+            case "sell_integration", "shop_integration" -> plugin.hasSellIntegration();
+            case "no_sell_integration", "no_shop_integration" -> !plugin.hasSellIntegration();
+            default -> true;
+        };
     }
 
     private ItemStack createCancelButton(Material material, Map<String, String> placeholders) {
