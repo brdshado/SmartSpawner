@@ -15,7 +15,7 @@ import java.util.Set;
 
 public class LanguageUpdater {
     private static final String VERSION_KEY = "language_version";
-    private static final String[] SUPPORTED_LANGUAGES = {"en_US", "en_US_DonutSMP", "en_US_DonutSMP_v2"};
+    private static final String[] SUPPORTED_LANGUAGES = {"en_US", "en_US_DonutSMP", "en_US_DonutSMP_v2", "tr_TR"};
 
     private final SmartSpawner plugin;
     private final Set<LanguageFileType> activeFileTypes = new HashSet<>();

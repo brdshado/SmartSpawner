@@ -10,6 +10,13 @@ import java.nio.file.Files;
 import java.util.*;
 
 public final class LanguageFiles {
+    public static final List<String> SUPPORTED_LANGUAGES = Arrays.asList(
+            "en_US",
+            "en_US_DonutSMP",
+            "en_US_DonutSMP_v2",
+            "tr_TR"
+    );
+
     private final JavaPlugin plugin;
     private final String defaultLocale;
     private final Set<LanguageFileType> activeFileTypes;
@@ -24,6 +31,7 @@ public final class LanguageFiles {
         Map<String, Set<LanguageFileType>> localeFileMap = new HashMap<>();
         localeFileMap.put("en_US_DonutSMP", EnumSet.allOf(LanguageFileType.class));
         localeFileMap.put("en_US_DonutSMP_v2", EnumSet.allOf(LanguageFileType.class));
+        localeFileMap.put("tr_TR", EnumSet.allOf(LanguageFileType.class));
 
         localeFileMap.forEach((locale, fileTypes) -> {
             fileTypes.forEach(fileType -> saveResource(String.format("language/%s/%s", locale, fileType.getFileName())));
