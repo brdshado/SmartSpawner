@@ -31,6 +31,10 @@
 # When disabled: Right-clicking a spawner opens the main GUI first (default behavior)
 skip_main_gui: false
 
+# Sound played when opening the main GUI (volume and pitch default to 1.0)
+# Set to "none" or leave empty to disable
+open_sound: "none"
+
 
 # Storage button
 slot_12:

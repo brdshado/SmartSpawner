@@ -212,7 +212,6 @@ public class SpawnerClickManager implements Listener {
     private void openStorageGui(Player player, SpawnerData spawner) {
         Inventory storageInventory = plugin.getSpawnerStorageUI()
                 .createStorageInventory(player, spawner, 1, -1);
-        player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
         player.openInventory(storageInventory);
     }
 

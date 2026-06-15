@@ -48,6 +48,8 @@ public class GuiLayoutConfig {
     private boolean skipMainGui;
     @Getter
     private boolean skipSellConfirmation;
+    @Getter
+    private String openSound;
 
     public GuiLayoutConfig(SmartSpawner plugin, ExternalGuiLayoutLoader loader,
                            GuiLayoutRegistryImpl registry) {
@@ -74,16 +76,24 @@ public class GuiLayoutConfig {
     }
 
     private void loadLayoutSettings() {
-        // Read skip_main_gui from the current layout's main_gui.yml
+        // Read skip_main_gui and open_sound from the current layout's main_gui.yml
         File mainFile = resolveLayoutFile(MAIN_GUI_FILE);
         this.skipMainGui = false;
+        this.openSound = null;
         if (mainFile != null) {
             try {
                 FileConfiguration config = YamlConfiguration.loadConfiguration(mainFile);
                 this.skipMainGui = config.getBoolean("skip_main_gui", false);
+                
+                // Read open_sound (uses Minecraft namespaced key format, e.g., "block.ender_chest.open")
+                // Volume and pitch are hardcoded to 1.0f for performance and simplicity
+                String soundName = config.getString("open_sound");
+                if (soundName != null && !soundName.trim().isEmpty() && !soundName.equalsIgnoreCase("none")) {
+                    this.openSound = soundName.trim();
+                }
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
-                        "Failed to read skip_main_gui from main_gui.yml, using default (false): " + e.getMessage(), e);
+                        "Failed to read settings from main_gui.yml, using defaults: " + e.getMessage(), e);
             }
         }
 

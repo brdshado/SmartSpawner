@@ -94,7 +94,7 @@ natural_spawner:
   # Add specific entity types only when you want to override that default.
   # If "default" is omitted, any unspecified entity falls back to 100.0.
   # drop_chance:
-  #   default: 50.0   # applies to every spawner type
+  #   default: 80.0   # applies to every spawner type
   #   ZOMBIE: 75.0    # override for a specific type
   #   SKELETON: 50.0
   #   BLAZE: 25.0

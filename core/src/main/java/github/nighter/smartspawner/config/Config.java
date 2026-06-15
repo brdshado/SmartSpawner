@@ -85,8 +85,9 @@ public class Config {
 
         // Parsed lookup data
         this.requiredTools = loadRequiredTools(config, logger);
-        this.naturalSpawnerDefaultDropChance = loadNaturalSpawnerDefaultDropChance(config, logger);
-        this.naturalSpawnerDropChances = loadNaturalSpawnerDropChances(config, logger);
+        DropChanceResult dropChanceResult = loadNaturalSpawnerDropChances(config, logger);
+        this.naturalSpawnerDefaultDropChance = dropChanceResult.defaultChance();
+        this.naturalSpawnerDropChances = dropChanceResult.entityChances();
     }
 
     public static Config get() {
@@ -124,47 +125,44 @@ public class Config {
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    private static double loadNaturalSpawnerDefaultDropChance(FileConfiguration config, Logger logger) {
-        double defaultDropChance = config.getDouble("natural_spawner.drop_chance." + DEFAULT_DROP_CHANCE_KEY, 100.0);
-        if (defaultDropChance < 0.0 || defaultDropChance > 100.0) {
-            logger.warning("Invalid drop chance for natural_spawner.drop_chance." + DEFAULT_DROP_CHANCE_KEY +
-                    ". Value must be between 0.0 and 100.0; using 100.0");
-            defaultDropChance = 100.0;
-        }
-        return defaultDropChance;
-    }
+    private record DropChanceResult(double defaultChance, Map<EntityType, Double> entityChances) {}
 
-    private static Map<EntityType, Double> loadNaturalSpawnerDropChances(FileConfiguration config, Logger logger) {
+    private static DropChanceResult loadNaturalSpawnerDropChances(FileConfiguration config, Logger logger) {
         ConfigurationSection section = config.getConfigurationSection("natural_spawner.drop_chance");
-        if (section == null) {
-            return Map.of();
-        }
-
+        double defaultDropChance = 100.0;
         Map<EntityType, Double> loadedDropChances = new EnumMap<>(EntityType.class);
-        for (String entityName : section.getKeys(false)) {
-            // The "default" key sets the drop chance for all spawner types and is handled separately.
-            if (entityName.equalsIgnoreCase(DEFAULT_DROP_CHANCE_KEY)) {
-                continue;
-            }
 
-            EntityType entityType;
-            try {
-                entityType = EntityType.valueOf(entityName.toUpperCase());
-            } catch (IllegalArgumentException ex) {
-                logger.warning("Invalid entity in natural_spawner.drop_chance: " + entityName);
-                continue;
-            }
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                if (key.equalsIgnoreCase(DEFAULT_DROP_CHANCE_KEY)) {
+                    double chance = section.getDouble(key, 100.0);
+                    if (chance < 0.0 || chance > 100.0) {
+                        logger.warning("Invalid drop chance for natural_spawner.drop_chance." + key +
+                                ". Value must be between 0.0 and 100.0; using 100.0");
+                        chance = 100.0;
+                    }
+                    defaultDropChance = chance;
+                } else {
+                    EntityType entityType;
+                    try {
+                        entityType = EntityType.valueOf(key.toUpperCase());
+                    } catch (IllegalArgumentException ex) {
+                        logger.warning("Invalid entity in natural_spawner.drop_chance: " + key);
+                        continue;
+                    }
 
-            double dropChance = section.getDouble(entityName, 100.0);
-            if (dropChance < 0.0 || dropChance > 100.0) {
-                logger.warning("Invalid drop chance for natural_spawner.drop_chance." + entityName +
-                        ". Value must be between 0.0 and 100.0; using 100.0");
-                dropChance = 100.0;
-            }
+                    double dropChance = section.getDouble(key, 100.0);
+                    if (dropChance < 0.0 || dropChance > 100.0) {
+                        logger.warning("Invalid drop chance for natural_spawner.drop_chance." + key +
+                                ". Value must be between 0.0 and 100.0; using 100.0");
+                        dropChance = 100.0;
+                    }
 
-            loadedDropChances.put(entityType, dropChance);
+                    loadedDropChances.put(entityType, dropChance);
+                }
+            }
         }
 
-        return Map.copyOf(loadedDropChances);
+        return new DropChanceResult(defaultDropChance, Map.copyOf(loadedDropChances));
     }
 }

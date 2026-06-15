@@ -174,7 +174,14 @@ public class SpawnerMenuUI {
         player.openInventory(menu);
 
         if (!refresh) {
-            player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 1.0f, 1.0f);
+            String openSound = plugin.getGuiLayoutConfig().getOpenSound();
+            if (openSound != null) {
+                try {
+                    player.playSound(player.getLocation(), openSound, 1.0f, 1.0f);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Invalid open_sound in main_gui.yml: " + openSound);
+                }
+            }
         }
 
         // Force timer update inactive for GUI if applicable
