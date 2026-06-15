@@ -35,38 +35,35 @@ spawner_protected:
 
 inventory_full:
   message: '&#FF4444Envanterin dolu.'
-  sound: block.note_block.pling
 
 spawner_storage_empty:
   message: '&#FF4444Spawner deposu şu an boş.'
-  sound: block.note_block.pling
 
 action_in_progress:
   message: '&#F0C857Şu anda devam eden bir işlem var. Lütfen bekle.'
   action_bar: '&#F0C857İşlem sürüyor. Lütfen bekle.'
-  sound: block.note_block.pling
 
 action_failed:
   message: '&#FF4444İşlem başarısız oldu. Lütfen tekrar dene.'
   action_bar: '&#FF4444İşlem başarısız. Lütfen tekrar dene.'
-  sound: block.note_block.pling
+
+action_not_ready:
+  message: '&#F0C857Bu işlem henüz hazır değil. &f{time} &#F0C857sonra tekrar deneyin.'
+  sound: block.note_block.bass
 
 # ──────────────────────────────────────────────────────
 #             Spawner - Ana Menü Etkileşimleri
 # ──────────────────────────────────────────────────────
 no_exp:
   message: '&#FF4444Toplanacak XP bulunmuyor.'
-  sound: block.note_block.pling
 
 exp_collected:
   message: '&a{exp} &ftecrübe puanı topladın.'
   action_bar: '&a+{exp} XP'
-  sound: entity.experience_orb.pickup
 
 exp_collected_with_mending:
   message: '&a{exp} &ftecrübe puanı topladın. &c{exp_mending} &fkadarı Tamir için harcandı.'
   action_bar: '&a+{exp} XP &f| &c-{exp_mending} Tamir için kullanıldı'
-  sound: entity.experience_orb.pickup
 
 # ──────────────────────────────────────────────────────
 #            Spawner - Depo Menüsü Etkileşimleri
@@ -150,19 +147,15 @@ sneak_break_blocked:
 # ──────────────────────────────────────────────────────
 no_sellable_items:
   message: '&#FF4444Satılabilecek hiçbir eşya bulunamadı.'
-  sound: block.note_block.pling
 
 sell_success:
   message: '&e{amount} &fadet eşyayı &a${price} &fkarşılığında sattın.'
   action_bar: '&a+${price}'
-  sound: block.note_block.bell
 
 sell_and_exp_success:
   message: '&e{amount} &fadet eşyayı &a${price} &fkarşılığında sattın ve &a{exp} &fXP topladın.'
   action_bar: '&a+${price} &f| &a+{exp} XP'
-  sound: block.note_block.bell
 
 sell_and_exp_success_with_mending:
   message: '&e{amount} &fadet eşyayı &a${price} &fkarşılığında sattın, &a{exp} &fXP topladın &f(&c{exp_mending} &fTamir için harcandı).'
   action_bar: '&a+${price} &f| &a+{exp} XP &f(&c-{exp_mending} Tamir)'
-  sound: block.note_block.bell

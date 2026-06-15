@@ -50,6 +50,17 @@ public class SpawnerSellConfirmUI {
     }
 
     public void openSellConfirmGui(Player player, SpawnerData spawner, PreviousGui previousGui, boolean collectExp) {
+        openSellConfirmGui(player, spawner, previousGui, collectExp, null, "click");
+    }
+
+    public void openSellConfirmGui(Player player, SpawnerData spawner, PreviousGui previousGui,
+                                   boolean collectExp, GuiButton sourceButton) {
+        openSellConfirmGui(player, spawner, previousGui, collectExp, sourceButton, "click");
+    }
+
+    public void openSellConfirmGui(Player player, SpawnerData spawner, PreviousGui previousGui,
+                                   boolean collectExp, GuiButton sourceButton,
+                                   String sourceClickType) {
         if (player == null || spawner == null) {
             return;
         }
@@ -57,6 +68,10 @@ public class SpawnerSellConfirmUI {
         // Check if there are items to sell before opening
         if (spawner.getVirtualInventory().getUsedSlots() == 0) {
             plugin.getMessageService().sendMessage(player, "spawner_storage_empty");
+            if (sourceButton != null) {
+                plugin.getGuiButtonInteractionService().playFailSound(
+                        player, sourceButton, sourceClickType);
+            }
             return;
         }
 
@@ -77,13 +92,28 @@ public class SpawnerSellConfirmUI {
             }
 
             player.closeInventory();
-            plugin.getSpawnerSellManager().sellAllItems(player, spawner, null, expCollected, expMending);
+            Runnable onComplete = sourceButton == null ? null : () -> {
+                if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+                    plugin.getGuiButtonInteractionService().playSuccessSound(
+                            player, sourceButton, sourceClickType);
+                } else {
+                    plugin.getGuiButtonInteractionService().playFailSound(
+                            player, sourceButton, sourceClickType);
+                }
+            };
+            plugin.getSpawnerSellManager().sellAllItems(
+                    player, spawner, onComplete, expCollected, expMending);
             return;
         }
 
         // Guard against opening a second sell GUI while a sell is already in progress.
         if (spawner.isSelling()) {
             return;
+        }
+
+        if (sourceButton != null) {
+            plugin.getGuiButtonInteractionService().playNavigateSound(
+                    player, sourceButton, sourceClickType);
         }
 
         // Cache title - no placeholders needed

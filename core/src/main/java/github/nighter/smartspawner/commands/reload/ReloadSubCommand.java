@@ -66,6 +66,7 @@ public class ReloadSubCommand extends BaseSubCommand {
 
             // Reload GUI layout config FIRST (before MenuUI and ClickManager)
             plugin.getGuiLayoutConfig().loadLayout();
+            plugin.getGuiButtonInteractionService().clear();
 
             // Then reload MenuUI and ClickManager (which depend on GUI layout)
             plugin.getSpawnerMenuUI().loadConfig();

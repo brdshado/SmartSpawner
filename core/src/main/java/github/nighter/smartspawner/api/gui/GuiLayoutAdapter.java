@@ -26,19 +26,35 @@ public class GuiLayoutAdapter {
      * @return the core button instance
      */
     public static GuiButton toCoreButton(GuiButtonData data, GuiLayoutType layoutType) {
+        String buttonType = null;
+        if (data != null) {
+            buttonType = data.getButtonType();
+            if (buttonType == null || buttonType.isBlank()) {
+                buttonType = "slot_" + data.getSlot();
+            }
+        }
+        return toCoreButton(data, layoutType, buttonType);
+    }
+
+    private static GuiButton toCoreButton(GuiButtonData data, GuiLayoutType layoutType,
+                                          String buttonType) {
         if (data == null) return null;
         if (data.getMaterial() == null) {
             throw new IllegalArgumentException("Button material cannot be null");
         }
         return new GuiButton(
-                data.getButtonType(),
+                buttonType,
                 toCoreSlot(data.getSlot(), layoutType),
                 data.getMaterial(),
                 data.isEnabled(),
                 data.getCondition(),
                 new HashMap<>(data.getActions()),
                 data.isInfoButton(),
-                data.getCustomTexture()
+                data.getCustomTexture(),
+                data.getCooldownTicks(),
+                data.getClickSounds(),
+                data.getSuccessSounds(),
+                data.getFailSounds()
         );
     }
 
@@ -63,7 +79,7 @@ public class GuiLayoutAdapter {
             if (entry.getValue() == null) {
                 throw new IllegalArgumentException("Button data cannot be null");
             }
-            GuiButton button = toCoreButton(entry.getValue(), expectedType);
+            GuiButton button = toCoreButton(entry.getValue(), expectedType, entry.getKey());
             if (!usedSlots.add(button.getSlot())) {
                 throw new IllegalArgumentException(
                         "Multiple buttons cannot use slot " + entry.getValue().getSlot());

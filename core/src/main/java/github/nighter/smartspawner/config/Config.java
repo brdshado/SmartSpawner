@@ -33,6 +33,9 @@ public class Config {
     private final int silkTouchLevel;
     private final boolean sellAndXpBreak;
 
+    // Spawner property settings
+    private final boolean allowExpMending;
+
     // Natural spawner settings
     private final boolean naturalBreakable;
     private final boolean convertNaturalToSmartSpawner;
@@ -61,6 +64,10 @@ public class Config {
         this.silkTouchRequired = config.getBoolean("spawner_break.silk_touch.required", true);
         this.silkTouchLevel = config.getInt("spawner_break.silk_touch.level", 1);
         this.sellAndXpBreak = config.getBoolean("spawner_break.sell_and_xp_break", true);
+
+        // Spawner property settings
+        this.allowExpMending = config.getBoolean(
+                "spawner_properties.default.allow_exp_mending", true);
 
         // Natural spawner settings
         this.naturalBreakable = config.getBoolean("natural_spawner.breakable", false);

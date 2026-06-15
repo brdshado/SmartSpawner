@@ -199,8 +199,6 @@ public class SpawnerSellManager {
         } else {
             messageService.sendMessage(player, "sell_success", placeholders);
         }
-        player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-
         spawner.markLastSellAsProcessed();
     }
 

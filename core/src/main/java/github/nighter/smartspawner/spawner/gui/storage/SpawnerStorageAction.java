@@ -4,8 +4,8 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.api.events.SpawnerDropAllEvent;
 import github.nighter.smartspawner.api.events.SpawnerTakeAllEvent;
+import github.nighter.smartspawner.api.gui.GuiLayoutType;
 import github.nighter.smartspawner.language.MessageService;
-import github.nighter.smartspawner.spawner.gui.layout.GuiLayoutConfig;
 import github.nighter.smartspawner.spawner.gui.storage.filter.FilterConfigUI;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
@@ -50,9 +50,7 @@ public class SpawnerStorageAction implements Listener {
 
     private record TransferResult(boolean anyItemMoved, boolean inventoryFull, int totalMoved) {}
     private final Map<UUID, Long> lastItemClickTime = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> lastControlClickTime = new ConcurrentHashMap<>();
     private static final long ITEM_CLICK_DELAY_MS = 150;
-    private static final long CONTROL_CLICK_DELAY_MS = 300;
 
     public SpawnerStorageAction(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -128,41 +126,60 @@ public class SpawnerStorageAction implements Listener {
         if (action == null || action.isEmpty()) {
             return;
         }
+        if ("none".equals(action)) {
+            return;
+        }
+        if (!plugin.getGuiButtonInteractionService().tryUse(
+                player, GuiLayoutType.STORAGE_GUI, button)) {
+            return;
+        }
 
         // OPTIMIZATION: Handle actions based on action value, not button name
         switch (action) {
             case "sort_items":
-                handleSortItemsClick(player, spawner, inventory);
+                playActionResult(player, button, clickTypeString,
+                        handleSortItemsClick(player, spawner, inventory));
                 break;
             case "open_filter":
+                plugin.getGuiButtonInteractionService().playNavigateSound(
+                        player, button, clickTypeString);
                 openFilterConfig(player, spawner);
                 break;
             case "previous_page":
                 if (holder.getCurrentPage() > 1) {
-                    updatePageContent(player, spawner, holder.getCurrentPage() - 1, inventory, true);
+                    plugin.getGuiButtonInteractionService().playNavigateSound(
+                            player, button, clickTypeString);
+                    updatePageContent(player, spawner, holder.getCurrentPage() - 1, inventory);
                 }
                 break;
             case "take_all":
-                handleTakeAllItems(player, inventory);
+                playActionResult(player, button, clickTypeString,
+                        handleTakeAllItems(player, inventory));
                 break;
             case "next_page":
                 if (holder.getCurrentPage() < holder.getTotalPages()) {
-                    updatePageContent(player, spawner, holder.getCurrentPage() + 1, inventory, true);
+                    plugin.getGuiButtonInteractionService().playNavigateSound(
+                            player, button, clickTypeString);
+                    updatePageContent(player, spawner, holder.getCurrentPage() + 1, inventory);
                 }
                 break;
             case "drop_page":
-                handleDropPageItems(player, spawner, inventory);
+                playActionResult(player, button, clickTypeString,
+                        handleDropPageItems(player, spawner, inventory));
                 break;
             case "sell_all":
-                handleSellAction(player, spawner, false);
+                handleSellAction(player, spawner, false, button, clickTypeString);
                 break;
             case "sell_and_exp":
-                handleSellAction(player, spawner, true);
+                handleSellAction(player, spawner, true, button, clickTypeString);
                 break;
             case "collect_exp":
-                handleCollectExpAction(player, spawner, inventory);
+                playActionResult(player, button, clickTypeString,
+                        handleCollectExpAction(player, spawner, inventory));
                 break;
             case "return_main":
+                plugin.getGuiButtonInteractionService().playNavigateSound(
+                        player, button, clickTypeString);
                 handleReturnToMainMenu(player, spawner);
                 break;
             case "none":
@@ -193,17 +210,19 @@ public class SpawnerStorageAction implements Listener {
      * Handle sell action with optional exp collection
      * OPTIMIZATION: Extracted common sell logic to reduce code duplication
      */
-    private void handleSellAction(Player player, SpawnerData spawner, boolean collectExp) {
+    private void handleSellAction(Player player, SpawnerData spawner, boolean collectExp,
+                                  github.nighter.smartspawner.spawner.gui.layout.GuiButton sourceButton,
+                                  String sourceClickType) {
         if (!plugin.hasSellIntegration()) {
+            plugin.getGuiButtonInteractionService().playFailSound(
+                    player, sourceButton, sourceClickType);
             return;
         }
 
         if (!player.hasPermission("smartspawner.sellall")) {
             messageService.sendMessage(player, "no_permission");
-            return;
-        }
-
-        if (isControlClickTooFrequent(player)) {
+            plugin.getGuiButtonInteractionService().playFailSound(
+                    player, sourceButton, sourceClickType);
             return;
         }
 
@@ -211,27 +230,27 @@ public class SpawnerStorageAction implements Listener {
         if (spawner.getVirtualInventory().getUsedSlots() == 0) {
             if (collectExp) {
                 // No items to sell but still collect exp
-                // Pass isSell=true to bypass the inner cooldown check (already checked above)
-                plugin.getSpawnerMenuAction().handleExpBottleClick(player, spawner, true);
+                boolean success = plugin.getSpawnerMenuAction()
+                        .handleExpBottleAcceptedClick(player, spawner, true);
+                playActionResult(player, sourceButton, sourceClickType, success);
             } else {
                 messageService.sendMessage(player, "spawner_storage_empty");
+                plugin.getGuiButtonInteractionService().playFailSound(
+                        player, sourceButton, sourceClickType);
             }
             return;
         }
 
         // Open confirmation GUI
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-        plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner, STORAGE, collectExp);
+        plugin.getSpawnerSellConfirmUI().openSellConfirmGui(
+                player, spawner, STORAGE, collectExp, sourceButton, sourceClickType);
     }
 
     /**
      * Collects stored XP from the spawner while keeping the player on the storage GUI.
      */
-    private void handleCollectExpAction(Player player, SpawnerData spawner, Inventory inventory) {
-        if (isControlClickTooFrequent(player)) {
-            return;
-        }
-        boolean collected = plugin.getSpawnerMenuAction().collectExpForPlayer(player, spawner);
+    private boolean handleCollectExpAction(Player player, SpawnerData spawner, Inventory inventory) {
+        boolean collected = plugin.getSpawnerMenuAction().tryCollectExpForPlayer(player, spawner);
         if (collected) {
             // Refresh button display so the XP counter updates to 0
             StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
@@ -239,6 +258,7 @@ public class SpawnerStorageAction implements Listener {
                 plugin.getSpawnerStorageUI().updateDisplay(inventory, spawner, holder.getCurrentPage(), holder.getTotalPages());
             }
         }
+        return collected;
     }
 
     /**
@@ -246,7 +266,7 @@ public class SpawnerStorageAction implements Listener {
      */
     private void handleReturnToMainMenu(Player player, SpawnerData spawner) {
         player.closeInventory();
-        spawnerMenuUI.openSpawnerMenu(player, spawner, false);
+        spawnerMenuUI.openSpawnerMenu(player, spawner, true);
     }
 
     private boolean isControlSlot(int slot, GuiLayout layout) {
@@ -414,14 +434,10 @@ public class SpawnerStorageAction implements Listener {
         spawner.markStorageDirty();
     }
 
-    private void handleDropPageItems(Player player, SpawnerData spawner, Inventory inventory) {
-        if (isControlClickTooFrequent(player)) {
-            return;
-        }
-
+    private boolean handleDropPageItems(Player player, SpawnerData spawner, Inventory inventory) {
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
         if (holder == null) {
-            return;
+            return false;
         }
 
         List<ItemStack> pageItems = new ArrayList<>();
@@ -439,13 +455,13 @@ public class SpawnerStorageAction implements Listener {
 
         if (pageItems.isEmpty()) {
             messageService.sendMessage(player, "spawner_storage_empty");
-            return;
+            return false;
         }
 
         if (SpawnerDropAllEvent.getHandlerList().getRegisteredListeners().length != 0) {
             SpawnerDropAllEvent event = new SpawnerDropAllEvent(player, spawner.getSpawnerLocation(), pageItems);
             Bukkit.getPluginManager().callEvent(event);
-            if (event.isCancelled()) return;
+            if (event.isCancelled()) return false;
             pageItems = event.getItems();
         }
 
@@ -482,8 +498,8 @@ public class SpawnerStorageAction implements Listener {
             );
         }
 
-        updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
-        player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.8f, 0.8f);
+        updatePageContent(player, spawner, holder.getCurrentPage(), inventory);
+        return true;
     }
 
     private void dropItemsInDirection(Player player, List<ItemStack> items) {
@@ -525,14 +541,11 @@ public class SpawnerStorageAction implements Listener {
 
 
     private void openFilterConfig(Player player, SpawnerData spawner) {
-        if (isControlClickTooFrequent(player)) {
-            return;
-        }
         filterConfigUI.openFilterConfigGUI(player, spawner);
     }
 
 
-    private void updatePageContent(Player player, SpawnerData spawner, int newPage, Inventory inventory, boolean uiClickSound) {
+    private void updatePageContent(Player player, SpawnerData spawner, int newPage, Inventory inventory) {
         SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
 
@@ -547,9 +560,6 @@ public class SpawnerStorageAction implements Listener {
 
         updateInventoryTitle(player, spawner, newPage, totalPages);
 
-        if (uiClickSound) {
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-        }
     }
 
     private int calculateTotalPages(SpawnerData spawner) {
@@ -609,67 +619,21 @@ public class SpawnerStorageAction implements Listener {
         return false;
     }
 
-    private boolean isControlClickTooFrequent(Player player) {
-        long now = System.currentTimeMillis();
-        long last = lastControlClickTime.getOrDefault(player.getUniqueId(), 0L);
-        lastControlClickTime.put(player.getUniqueId(), now);
-        return (now - last) < CONTROL_CLICK_DELAY_MS;
-    }
-
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID playerId = event.getPlayer().getUniqueId();
         lastItemClickTime.remove(playerId);
-        lastControlClickTime.remove(playerId);
     }
 
-    private void openMainMenu(Player player, SpawnerData spawner) {
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-        if (spawner.isStorageDirty()){
-            spawnerManager.markSpawnerModified(spawner.getSpawnerId());
-            spawner.clearStorageDirty();
-        }
-
-        // If skip_main_gui is enabled, just close the storage GUI instead
-        if (plugin.getGuiLayoutConfig().isSkipMainGui()) {
-            player.closeInventory();
-            return;
-        }
-
-        // Check if player is Bedrock and use appropriate menu
-        if (isBedrockPlayer(player)) {
-            if (plugin.getSpawnerMenuFormUI() != null) {
-                plugin.getSpawnerMenuFormUI().openSpawnerForm(player, spawner);
-            } else {
-                // Fallback to standard GUI if FormUI not available
-                spawnerMenuUI.openSpawnerMenu(player, spawner, true);
-            }
-        } else {
-            spawnerMenuUI.openSpawnerMenu(player, spawner, true);
-        }
-    }
-
-    private boolean isBedrockPlayer(Player player) {
-        if (plugin.getIntegrationManager() == null ||
-                plugin.getIntegrationManager().getFloodgateHook() == null) {
-            return false;
-        }
-        return plugin.getIntegrationManager().getFloodgateHook().isBedrockPlayer(player);
-    }
-
-    private void handleSortItemsClick(Player player, SpawnerData spawner, Inventory inventory) {
-        if (isControlClickTooFrequent(player)) {
-            return;
-        }
-
+    private boolean handleSortItemsClick(Player player, SpawnerData spawner, Inventory inventory) {
         // Validate loot config
         if (spawner.getLootConfig() == null || spawner.getLootConfig().getAllItems() == null) {
-            return;
+            return false;
         }
 
         var lootItems = spawner.getLootConfig().getAllItems();
         if (lootItems.isEmpty()) {
-            return;
+            return false;
         }
 
         // Get current sort item
@@ -683,7 +647,7 @@ public class SpawnerStorageAction implements Listener {
                 .toList();
 
         if (sortedLoot.isEmpty()) {
-            return;
+            return false;
         }
 
         // Find next sort item
@@ -719,11 +683,8 @@ public class SpawnerStorageAction implements Listener {
         // Update GUI display to reflect VirtualInventory state
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
         if (holder != null) {
-            updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
+            updatePageContent(player, spawner, holder.getCurrentPage(), inventory);
         }
-
-        // Play sound and show feedback
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.2f);
 
         // Log items sort action
         if (plugin.getSpawnerActionLogger() != null) {
@@ -735,6 +696,7 @@ public class SpawnerStorageAction implements Listener {
                             .metadata("previous_sort", currentSort != null ? currentSort.name() : "none")
             );
         }
+        return true;
     }
 
     private void openLootPage(Player player, SpawnerData spawner, int page) {
@@ -754,14 +716,10 @@ public class SpawnerStorageAction implements Listener {
             );
         }
 
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
         player.openInventory(pageInventory);
     }
 
-    public void handleTakeAllItems(Player player, Inventory sourceInventory) {
-        if (isControlClickTooFrequent(player)) {
-            return;
-        }
+    public boolean handleTakeAllItems(Player player, Inventory sourceInventory) {
         StoragePageHolder holder = (StoragePageHolder) sourceInventory.getHolder(false);
         SpawnerData spawner = holder.getSpawnerData();
         VirtualInventory virtualInv = spawner.getVirtualInventory();
@@ -777,13 +735,13 @@ public class SpawnerStorageAction implements Listener {
 
         if (sourceItems.isEmpty()) {
             messageService.sendMessage(player, "spawner_storage_empty");
-            return;
+            return false;
         }
 
         if (SpawnerTakeAllEvent.getHandlerList().getRegisteredListeners().length != 0) {
             SpawnerTakeAllEvent event = new SpawnerTakeAllEvent(player, spawner.getSpawnerLocation(), sourceItems);
             Bukkit.getPluginManager().callEvent(event);
-            if (event.isCancelled()) return;
+            if (event.isCancelled()) return false;
             sourceItems = event.getItems();
         }
 
@@ -829,6 +787,19 @@ public class SpawnerStorageAction implements Listener {
                                 .metadata("items_left", itemsLeft)
                 );
             }
+        }
+        return result.anyItemMoved;
+    }
+
+    private void playActionResult(
+            Player player,
+            github.nighter.smartspawner.spawner.gui.layout.GuiButton button,
+            String clickType,
+            boolean success) {
+        if (success) {
+            plugin.getGuiButtonInteractionService().playSuccessSound(player, button, clickType);
+        } else {
+            plugin.getGuiButtonInteractionService().playFailSound(player, button, clickType);
         }
     }
 
@@ -910,8 +881,6 @@ public class SpawnerStorageAction implements Listener {
     private void sendTransferMessage(Player player, TransferResult result) {
         if (!result.anyItemMoved) {
             messageService.sendMessage(player, "inventory_full");
-        } else {
-            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.0f);
         }
     }
 

@@ -102,8 +102,6 @@ public class FilterConfigUI implements Listener {
         // Setup the filter inventory
         setupFilterInventory(filterInventory, spawner);
 
-        // Open the inventory for the player with appropriate sound
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
         player.openInventory(filterInventory);
     }
 

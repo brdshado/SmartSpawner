@@ -35,38 +35,35 @@ spawner_protected:
 
 inventory_full:
   message: '&#FF4444Your inventory is full.'
-  sound: block.note_block.pling
 
 spawner_storage_empty:
   message: '&#FF4444Spawner storage is empty.'
-  sound: block.note_block.pling
 
 action_in_progress:
   message: '&#F0C857There is already an action in progress. Please wait.'
   action_bar: '&#F0C857Action in progress. Please wait.'
-  sound: block.note_block.pling
 
 action_failed:
   message: '&#FF4444The action failed. Please try again.'
   action_bar: '&#FF4444The action failed. Please try again.'
-  sound: block.note_block.pling
+
+action_not_ready:
+  message: '&#F0C857This action is not ready yet. Try again in &f{time}&#F0C857.'
+  sound: block.note_block.bass
 
 # ──────────────────────────────────────────────────────
 #             Spawner - Main GUI Interactions
 # ──────────────────────────────────────────────────────
 no_exp:
   message: '&#FF4444There is no EXP available'
-  sound: block.note_block.pling
 
 exp_collected:
   message: 'You collected &a{exp} &fexperience.'
   action_bar: '&a+{exp} EXP'
-  sound: entity.experience_orb.pickup
 
 exp_collected_with_mending:
   message: 'You collected &a{exp} &fexperience. &c{exp_mending} &fwas used on Mending.'
   action_bar: '&a+{exp} EXP &f| &c-{exp_mending} used on Mending'
-  sound: entity.experience_orb.pickup
 
 # ──────────────────────────────────────────────────────
 #            Spawner - Storage GUI Interactions
@@ -150,19 +147,15 @@ sneak_break_blocked:
 # ──────────────────────────────────────────────────────
 no_sellable_items:
   message: '&#FF4444No sellable items were found.'
-  sound: block.note_block.pling
 
 sell_success:
   message: 'You sold &e{amount} &fitem(s) for &a${price}&f.'
   action_bar: '&a+${price}'
-  sound: block.note_block.bell
 
 sell_and_exp_success:
   message: 'You sold &e{amount} &fitem(s) for &a${price}&f and collected &a{exp} &fEXP.'
   action_bar: '&a+${price} &f| &a+{exp} EXP'
-  sound: block.note_block.bell
 
 sell_and_exp_success_with_mending:
   message: 'You sold &e{amount} &fitem(s) for &a${price}&f, collected &a{exp} &fEXP &f(&c{exp_mending} &fused on Mending).'
   action_bar: '&a+${price} &f| &a+{exp} EXP &f(&c-{exp_mending} Mending)'
-  sound: block.note_block.bell

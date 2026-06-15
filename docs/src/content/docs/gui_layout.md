@@ -21,6 +21,105 @@ plugins/SmartSpawner/gui_layouts/
 
 You can select which layout to use by changing the `gui_layout` value in your main `config.yml` file.
 
+## Button Cooldowns
+
+Every layout button supports an optional per-player cooldown:
+
+```yaml
+slot_12:
+  material: CHEST
+  enabled: true
+  cooldown: "2s"
+  click:
+    action: "open_storage"
+```
+
+The value uses the same tick-based duration format as `config.yml`:
+
+- `20` means 20 server ticks.
+- `5s`, `10m`, `1h`, `2d`, `1w`, `1mo`, and `1y` are supported.
+- Compound values can use underscores, for example `1m_30s`.
+- Missing or `0` means no cooldown.
+
+Cooldowns are not added to bundled buttons by default. Add `cooldown` only to the buttons that need it. The cooldown is tracked separately for each player, GUI type, and button key. A click rejected by cooldown does not run the action or play its configured sound, and sends the general `action_not_ready` message with the `{time}` placeholder.
+
+All actionable GUI buttons also have a separate built-in 300 ms anti-spam debounce, even when no `cooldown` is configured. Anti-spam is checked before the button cooldown and does not replace or disable it.
+
+Cooldown can also be overridden inside a conditional branch:
+
+```yaml
+slot_14:
+  material: PLAYER_HEAD
+  enabled: true
+  if:
+    sell_integration:
+      cooldown: "3s"
+      click:
+        action: "sell_and_exp"
+    no_sell_integration:
+      click:
+        action: "open_stacker"
+```
+
+## Button Click Sounds
+
+Navigate buttons use one sound when navigation is accepted:
+
+```yaml
+slot_1:
+  material: ARROW
+  enabled: true
+  click:
+    action: "previous_page"
+    sound: ui.button.click
+```
+
+Action buttons use separate sounds for their final result:
+
+```yaml
+slot_6:
+  material: BUNDLE
+  enabled: true
+  click:
+    action: "take_all"
+    sound_success:
+      name: entity.item.pickup
+      volume: 1.0
+      pitch: 1.0
+    sound_fail: block.note_block.pling
+```
+
+`volume` and `pitch` default to `1.0`. The success or fail sound is played only after the handler knows the actual result, including asynchronous sell actions.
+
+Result messages such as `no_exp`, `exp_collected`, `inventory_full`, `action_failed`, and sell result messages do not define sounds. Their sounds are owned by the action button so layouts can customize them independently.
+
+Each click type owns its action and sounds, so left and right clicks can be configured independently:
+
+```yaml
+left_click:
+  action: "sell_and_exp"
+  sound: ui.button.click
+  sound_success: block.note_block.bell
+  sound_fail: block.note_block.pling
+right_click:
+  action: "open_stacker"
+  sound: ui.button.click
+```
+
+Each sound key accepts one sound or a list. List entries may be plain Bukkit keys or objects with `name`, `volume`, and `pitch`:
+
+```yaml
+sound_success:
+  - block.note_block.bell
+  - name: entity.experience_orb.pickup
+    volume: 0.8
+    pitch: 1.2
+```
+
+The same click blocks work inside an `if:` branch. Use Bukkit sound keys such as `ui.button.click`, `block.note_block.bell`, or `entity.item.pickup`. Omit a sound key, or set it to `none`, to disable that sound.
+
+The older flat action format (`click: "action"`) and button-level nested `sound` format remain readable for backward compatibility. New layouts should use click blocks.
+
 ## Custom Player Head Textures
 
 If a button uses `PLAYER_HEAD` as its material, you can provide a `custom_texture` to display a specific skin. This is especially useful for the spawner info button or any custom decorative buttons, working exactly like the `head_texture` configuration in `spawners_settings.yml`.
@@ -35,10 +134,13 @@ slot_14:
   info_button: true
   if:
     sell_integration:
-      left_click: "sell_and_exp"
-      right_click: "open_stacker"
+      left_click:
+        action: "sell_and_exp"
+      right_click:
+        action: "open_stacker"
     no_sell_integration:
-      click: "open_stacker"
+      click:
+        action: "open_stacker"
 ```
 
 ### Key Details
@@ -65,9 +167,11 @@ slot_14:
   if:
     sell_integration:
       material: EMERALD # custom_texture is ignored here because material is no longer PLAYER_HEAD
-      left_click: "sell_and_exp"
+      left_click:
+        action: "sell_and_exp"
     no_sell_integration:
-      click: "open_stacker"
+      click:
+        action: "open_stacker"
 ```
 
 <br>
@@ -75,4 +179,4 @@ slot_14:
 
 ---
 
-*Last update: June 9, 2026*
+*Last update: June 14, 2026*

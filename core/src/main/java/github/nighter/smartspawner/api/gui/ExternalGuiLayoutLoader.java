@@ -9,7 +9,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
@@ -27,6 +29,9 @@ public class ExternalGuiLayoutLoader {
     private static final int SLOT_OFFSET = 44;
     private static final int MAIN_GUI_SIZE = 27;
     private static final int SELL_CONFIRM_GUI_SIZE = 27;
+    private static final String[] CLICK_TYPES = {
+            "click", "left_click", "right_click", "shift_left_click", "shift_right_click"
+    };
 
     private final SmartSpawner plugin;
     private final Logger logger;
@@ -104,6 +109,12 @@ public class ExternalGuiLayoutLoader {
         String condition = config.getString(buttonKey + ".condition", null);
         boolean infoButton = config.getBoolean(buttonKey + ".info_button", false);
         String customTexture = config.getString(buttonKey + ".custom_texture", null);
+        long cooldownTicks = parseCooldown(config.getString(buttonKey + ".cooldown"), buttonKey);
+        Map<String, List<GuiButtonSoundData>> clickSounds = new HashMap<>();
+        Map<String, List<GuiButtonSoundData>> successSounds = new HashMap<>();
+        Map<String, List<GuiButtonSoundData>> failSounds = new HashMap<>();
+        parseLegacyButtonSounds(
+                config, buttonKey, clickSounds, successSounds, failSounds);
 
         if (!isValidSlot(slot, layoutType)) {
             if (logger != null) {
@@ -120,6 +131,7 @@ public class ExternalGuiLayoutLoader {
         int actualSlot = calculateActualSlot(slot, layoutType);
 
         Map<String, String> actions = new HashMap<>();
+        ConfigurationSection actionSection = config.getConfigurationSection(buttonKey);
 
         ConfigurationSection ifSection = config.getConfigurationSection(buttonKey + ".if");
         if (ifSection != null) {
@@ -137,30 +149,188 @@ public class ExternalGuiLayoutLoader {
                             customTexture = conditionalCustomTexture;
                         }
 
-                        String[] clickTypes = {"click", "left_click", "right_click", "shift_left_click", "shift_right_click"};
-                        for (String clickType : clickTypes) {
-                            String action = conditionActions.getString(clickType);
-                            if (action != null && !action.isEmpty()) {
-                                actions.put(clickType, action);
-                            }
+                        if (conditionActions.contains("cooldown")) {
+                            cooldownTicks = parseCooldown(
+                                    conditionActions.getString("cooldown"), buttonKey + ".if." + conditionKey);
                         }
+                        parseLegacyButtonSounds(conditionActions, "", clickSounds,
+                                successSounds, failSounds);
+                        parseClickActions(conditionActions, actions, clickSounds,
+                                successSounds, failSounds,
+                                buttonKey + ".if." + conditionKey);
                     }
                     break;
                 }
             }
-        } else {
-            String[] clickTypes = {"click", "left_click", "right_click", "shift_left_click", "shift_right_click"};
-            for (String clickType : clickTypes) {
-                String action = config.getString(buttonKey + "." + clickType);
-                if (action != null && !action.isEmpty()) {
-                    actions.put(clickType, action);
-                }
-            }
+        } else if (actionSection != null) {
+            parseClickActions(actionSection, actions, clickSounds, successSounds, failSounds,
+                    buttonKey);
         }
 
-        GuiButton button = new GuiButton(buttonKey, actualSlot, material, true, condition, actions, infoButton, customTexture);
+        GuiButton button = new GuiButton(buttonKey, actualSlot, material, true, condition, actions,
+                infoButton, customTexture, cooldownTicks, clickSounds, successSounds, failSounds);
         layout.addButton(buttonKey, button);
         return true;
+    }
+
+    private long parseCooldown(String value, String buttonKey) {
+        if (value == null || value.isBlank()) {
+            return 0L;
+        }
+        try {
+            return GuiDurationParser.parseToTicks(value);
+        } catch (IllegalArgumentException | ArithmeticException e) {
+            if (logger != null) {
+                logger.warning("Invalid cooldown '" + value + "' for button " + buttonKey
+                        + ". Cooldown disabled.");
+            }
+            return 0L;
+        }
+    }
+
+    private void parseClickActions(
+            ConfigurationSection section,
+            Map<String, String> actions,
+            Map<String, List<GuiButtonSoundData>> clickSounds,
+            Map<String, List<GuiButtonSoundData>> successSounds,
+            Map<String, List<GuiButtonSoundData>> failSounds,
+            String context) {
+        for (String clickType : CLICK_TYPES) {
+            if (!section.contains(clickType)) {
+                continue;
+            }
+
+            ConfigurationSection clickSection = section.getConfigurationSection(clickType);
+            if (clickSection == null) {
+                String action = section.getString(clickType);
+                if (action != null && !action.isBlank()) {
+                    actions.put(clickType, action);
+                }
+                continue;
+            }
+
+            String action = clickSection.getString("action");
+            if (action != null && !action.isBlank()) {
+                actions.put(clickType, action);
+            } else if (logger != null) {
+                logger.warning("Missing action for " + context + "." + clickType);
+            }
+
+            putSounds(clickSection, "sound", clickType, clickSounds,
+                    context + "." + clickType + ".sound");
+            putSounds(clickSection, "sound_success", clickType, successSounds,
+                    context + "." + clickType + ".sound_success");
+            putSounds(clickSection, "sound_fail", clickType, failSounds,
+                    context + "." + clickType + ".sound_fail");
+        }
+    }
+
+    private void parseLegacyButtonSounds(
+            ConfigurationSection section,
+            String basePath,
+            Map<String, List<GuiButtonSoundData>> clickSounds,
+            Map<String, List<GuiButtonSoundData>> successSounds,
+            Map<String, List<GuiButtonSoundData>> failSounds) {
+        String soundPath = path(basePath, "sound");
+        if (!section.contains(soundPath)) {
+            return;
+        }
+
+        ConfigurationSection soundSection = section.getConfigurationSection(soundPath);
+        if (soundSection != null
+                && (soundSection.contains("success") || soundSection.contains("fail"))) {
+            if (soundSection.contains("name")) {
+                clickSounds.put("click", parseSounds(soundSection, "", soundPath));
+            }
+            putSounds(soundSection, "success", "click", successSounds,
+                    soundPath + ".success");
+            putSounds(soundSection, "fail", "click", failSounds, soundPath + ".fail");
+            return;
+        }
+
+        clickSounds.put("click", parseSounds(section, soundPath, soundPath));
+    }
+
+    private void putSounds(
+            ConfigurationSection section,
+            String path,
+            String clickType,
+            Map<String, List<GuiButtonSoundData>> target,
+            String context) {
+        if (section.contains(path)) {
+            target.put(clickType, parseSounds(section, path, context));
+        }
+    }
+
+    private List<GuiButtonSoundData> parseSounds(
+            ConfigurationSection section, String soundPath, String context) {
+        Object raw = soundPath.isEmpty() ? section : section.get(soundPath);
+        List<GuiButtonSoundData> sounds = new ArrayList<>();
+
+        if (raw instanceof String soundName) {
+            addSound(sounds, soundName, 1.0f, 1.0f, context);
+        } else if (raw instanceof List<?> values) {
+            for (Object value : values) {
+                parseSoundValue(sounds, value, context);
+            }
+        } else if (raw instanceof ConfigurationSection soundSection) {
+            addSound(sounds, soundSection.getString("name"),
+                    (float) soundSection.getDouble("volume", 1.0),
+                    (float) soundSection.getDouble("pitch", 1.0), context);
+        } else if (raw instanceof Map<?, ?> soundMap) {
+            addSound(sounds, stringValue(soundMap.get("name")),
+                    floatValue(soundMap.get("volume"), 1.0f),
+                    floatValue(soundMap.get("pitch"), 1.0f), context);
+        } else if (raw != null && logger != null) {
+            logger.warning("Invalid sound value at " + context);
+        }
+
+        return List.copyOf(sounds);
+    }
+
+    private void parseSoundValue(
+            List<GuiButtonSoundData> sounds, Object value, String context) {
+        if (value instanceof String soundName) {
+            addSound(sounds, soundName, 1.0f, 1.0f, context);
+        } else if (value instanceof Map<?, ?> soundMap) {
+            addSound(sounds, stringValue(soundMap.get("name")),
+                    floatValue(soundMap.get("volume"), 1.0f),
+                    floatValue(soundMap.get("pitch"), 1.0f), context);
+        } else if (value instanceof ConfigurationSection soundSection) {
+            addSound(sounds, soundSection.getString("name"),
+                    (float) soundSection.getDouble("volume", 1.0),
+                    (float) soundSection.getDouble("pitch", 1.0), context);
+        } else if (logger != null) {
+            logger.warning("Invalid sound entry at " + context);
+        }
+    }
+
+    private void addSound(
+            List<GuiButtonSoundData> sounds, String name, float volume, float pitch,
+            String context) {
+        if (name == null || name.isBlank() || "none".equalsIgnoreCase(name)) {
+            return;
+        }
+        try {
+            sounds.add(new GuiButtonSoundData(name, volume, pitch));
+        } catch (IllegalArgumentException e) {
+            if (logger != null) {
+                logger.warning("Invalid sound configuration at " + context + ": "
+                        + e.getMessage());
+            }
+        }
+    }
+
+    private String path(String basePath, String child) {
+        return basePath == null || basePath.isBlank() ? child : basePath + "." + child;
+    }
+
+    private String stringValue(Object value) {
+        return value != null ? value.toString() : null;
+    }
+
+    private float floatValue(Object value, float fallback) {
+        return value instanceof Number number ? number.floatValue() : fallback;
     }
 
     private int parseSlotFromKey(String buttonKey) {

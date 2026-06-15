@@ -61,9 +61,8 @@ public class GuiLayoutConfig {
 
     public void loadLayout() {
         this.currentLayout = plugin.getConfig().getString("gui_layout", DEFAULT_LAYOUT);
-        initializeLayoutsDirectory();
-        
-        // Check and update layout files before loading
+
+        // Creates missing layout files with a version header and updates existing ones.
         layoutUpdater.checkAndUpdateLayouts();
 
         this.currentStorageLayout = loadCurrentStorageLayout();
@@ -72,67 +71,6 @@ public class GuiLayoutConfig {
 
         // Load GUI behaviour settings from the respective layout files
         loadLayoutSettings();
-    }
-
-    private void initializeLayoutsDirectory() {
-        if (!layoutsDir.exists()) {
-            layoutsDir.mkdirs();
-        }
-        autoSaveLayoutFiles();
-    }
-
-    private void autoSaveLayoutFiles() {
-        try {
-            String[] layoutNames = new String[]{DEFAULT_LAYOUT, "DonutSMP", "DonutSMP_v2"};
-
-            for (String layoutName : layoutNames) {
-                File layoutDir = new File(layoutsDir, layoutName);
-                if (!layoutDir.exists()) {
-                    layoutDir.mkdirs();
-                }
-
-                // Save storage GUI layout
-                File storageFile = new File(layoutDir, STORAGE_GUI_FILE);
-                String storageResourcePath = GUI_LAYOUTS_DIR + "/" + layoutName + "/" + STORAGE_GUI_FILE;
-
-                if (!storageFile.exists()) {
-                    try {
-                        plugin.saveResource(storageResourcePath, false);
-                    } catch (Exception e) {
-                        plugin.getLogger().log(Level.WARNING,
-                                "Failed to auto-save storage layout resource for " + layoutName + ": " + e.getMessage(), e);
-                    }
-                }
-
-                // Save main GUI layout
-                File mainFile = new File(layoutDir, MAIN_GUI_FILE);
-                String mainResourcePath = GUI_LAYOUTS_DIR + "/" + layoutName + "/" + MAIN_GUI_FILE;
-
-                if (!mainFile.exists()) {
-                    try {
-                        plugin.saveResource(mainResourcePath, false);
-                    } catch (Exception e) {
-                        plugin.getLogger().log(Level.WARNING,
-                                "Failed to auto-save main layout resource for " + layoutName + ": " + e.getMessage(), e);
-                    }
-                }
-
-                // Save sell confirm GUI layout
-                File sellConfirmFile = new File(layoutDir, SELL_CONFIRM_GUI_FILE);
-                String sellConfirmResourcePath = GUI_LAYOUTS_DIR + "/" + layoutName + "/" + SELL_CONFIRM_GUI_FILE;
-
-                if (!sellConfirmFile.exists()) {
-                    try {
-                        plugin.saveResource(sellConfirmResourcePath, false);
-                    } catch (Exception e) {
-                        plugin.getLogger().log(Level.WARNING,
-                                "Failed to auto-save sell confirm layout resource for " + layoutName + ": " + e.getMessage(), e);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to auto-save layout files", e);
-        }
     }
 
     private void loadLayoutSettings() {

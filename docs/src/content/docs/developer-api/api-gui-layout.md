@@ -48,7 +48,9 @@ GuiLayoutData mainGui = new GuiLayoutBuilder()
     .addButton("slot_11", new GuiButtonBuilder()
         .slot(11)
         .material(Material.CHEST)
+        .cooldown("2s")
         .action("click", "open_storage")
+        .sound("block.chest.open", 1.0f, 1.0f)
         .build())
     .addButton("slot_14", new GuiButtonBuilder()
         .slot(14)
@@ -57,6 +59,11 @@ GuiLayoutData mainGui = new GuiLayoutBuilder()
         .customTexture("df5de940bfe499c59ee8dac9f9c3919e7535eff3a9acb16f4842bf290f4c679f")
         .action("left_click", "sell_and_exp")
         .action("right_click", "open_stacker")
+        .sound("left_click", "ui.button.click")
+        .successSound("left_click", "block.note_block.bell")
+        .successSound("left_click", "entity.experience_orb.pickup")
+        .failSound("left_click", "block.note_block.pling")
+        .sound("right_click", "ui.button.click")
         .build())
     .addButton("slot_15", new GuiButtonBuilder()
         .slot(15)
@@ -157,6 +164,27 @@ Use this enum to specify which GUI type your provider or registered layout targe
 
 ## GuiButtonBuilder Actions
 
+### Cooldown and Sound Methods
+
+| Method | Description |
+|--------|-------------|
+| `cooldown(String)` | Sets a cooldown using layout/config duration syntax, such as `"5s"` or `"1m_30s"` |
+| `cooldownTicks(long)` | Sets a cooldown directly in server ticks; `0` disables it |
+| `sound(String)` | Sets a click sound with volume and pitch defaulting to `1.0` |
+| `sound(String, float, float)` | Sets sound name, volume, and pitch |
+| `successSound(String)` | Sets the sound played after a successful action |
+| `successSound(String, float, float)` | Sets successful action sound, volume, and pitch |
+| `failSound(String)` | Sets the sound played after a failed action |
+| `failSound(String, float, float)` | Sets failed action sound, volume, and pitch |
+| `sound(String, String)` | Adds a sound for a specific click type |
+| `successSound(String, String)` | Adds a success sound for a specific click type |
+| `failSound(String, String)` | Adds a fail sound for a specific click type |
+| `noSound()` | Removes the configured click sound |
+
+Click-specific overloads may be called repeatedly to combine multiple sounds. Overloads with `volume` and `pitch` are also available. The immutable sound maps are exposed by `GuiButtonData`.
+
+Cooldowns are per player, GUI type, and button key. Programmatic buttons default to no cooldown and no sound unless these builder methods are used.
+
 Common action strings used in `GuiButtonBuilder.action(String clickType, String action)`:
 
 | Action | Description |
@@ -205,4 +233,4 @@ Button slots use the same **1-based numbering** as the YAML layout files:
 
 ---
 
-*Last update: June 12, 2026*
+*Last update: June 14, 2026*

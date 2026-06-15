@@ -41,6 +41,7 @@ import github.nighter.smartspawner.spawner.data.database.YamlToDatabaseMigration
 import github.nighter.smartspawner.spawner.data.storage.SpawnerStorage;
 import github.nighter.smartspawner.spawner.data.storage.StorageMode;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayoutConfig;
+import github.nighter.smartspawner.spawner.gui.layout.GuiButtonInteractionService;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuAction;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuFormUI;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuUI;
@@ -112,6 +113,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
 
     // Core UI components
     private GuiLayoutConfig guiLayoutConfig;
+    private GuiButtonInteractionService guiButtonInteractionService;
     private SpawnerMenuUI spawnerMenuUI;
     private SpawnerMenuFormUI spawnerMenuFormUI;
     private SpawnerStorageUI spawnerStorageUI;
@@ -284,6 +286,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.guiLayoutLoader = new ExternalGuiLayoutLoader(this);
         this.guiLayoutRegistry = new GuiLayoutRegistryImpl(guiLayoutLoader, getLogger());
         this.guiLayoutConfig = new GuiLayoutConfig(this, guiLayoutLoader, guiLayoutRegistry);
+        this.guiButtonInteractionService = new GuiButtonInteractionService(this);
         this.spawnerStorageUI = new SpawnerStorageUI(this);
         this.filterConfigUI = new FilterConfigUI(this);
         this.spawnerMenuUI = new SpawnerMenuUI(this);
@@ -452,6 +455,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         pm.registerEvents(serverSelectionHandler, this);
         pm.registerEvents(pricesGUI, this);
         pm.registerEvents(spawnerSellConfirmListener, this);
+        pm.registerEvents(guiButtonInteractionService, this);
 
         // Register near-command listener (player quit cleanup)
         if (spawnerHighlightManager != null) {
@@ -512,27 +516,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         metrics.addCustomChart(new SimplePie("gui_layout", () ->
                 getConfig().getString("gui_layout", "default")));
 
-        // --- Economy & shop integration ---
-        metrics.addCustomChart(new SimplePie("sell_integration", () ->
-                String.valueOf(getConfig().getBoolean("sell_integration.enabled", true))));
-
-        metrics.addCustomChart(new SimplePie("currency_type", () -> {
-            if (!getConfig().getBoolean("sell_integration.enabled", true)) return "disabled";
-            return itemPriceManager.getCurrencyManager() != null
-                    ? itemPriceManager.getCurrencyManager().getConfiguredCurrencyType()
-                    : "none";
-        }));
-
-        metrics.addCustomChart(new SimplePie("shop_plugin", () -> {
-            if (!getConfig().getBoolean("sell_integration.enabled", true)) return "disabled";
-            return itemPriceManager.getShopIntegrationManager() != null
-                    ? itemPriceManager.getShopIntegrationManager().getActiveShopPlugin()
-                    : "none";
-        }));
-
-        metrics.addCustomChart(new SimplePie("price_source_mode", () ->
-                getConfig().getString("sell_integration.price_source_mode", "SHOP_PRIORITY")));
-
         // --- Protection plugin integrations ---
         metrics.addCustomChart(new AdvancedPie("protection_plugins", () -> {
             Map<String, Integer> map = new HashMap<>();
@@ -550,23 +533,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
             if (map.isEmpty()) map.put("None", 1);
             return map;
         }));
-
-        // --- Extra integrations ---
-        metrics.addCustomChart(new SimplePie("auraskills_integration", () ->
-                String.valueOf(integrationManager.isHasAuraSkills())));
-
-        metrics.addCustomChart(new SimplePie("mythicmobs_integration", () ->
-                String.valueOf(integrationManager.isHasMythicMobs())));
-
-        // --- Key feature flags ---
-        metrics.addCustomChart(new SimplePie("silk_touch_required", () ->
-                String.valueOf(getConfig().getBoolean("spawner_break.silk_touch.required", true))));
-
-        metrics.addCustomChart(new SimplePie("natural_spawner_breakable", () ->
-                String.valueOf(getConfig().getBoolean("natural_spawner.breakable", false))));
-
-        metrics.addCustomChart(new SimplePie("natural_spawner_convert", () ->
-                String.valueOf(getConfig().getBoolean("natural_spawner.convert_to_smart_spawner", false))));
     }
 
     /** Bucket a spawner/stack count into a human-readable range label (supports up to ~100M). */

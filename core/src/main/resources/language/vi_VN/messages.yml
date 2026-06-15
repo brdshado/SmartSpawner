@@ -35,38 +35,35 @@ spawner_protected:
 
 inventory_full:
   message: '&#FF4444Túi đồ của bạn đã đầy.'
-  sound: block.note_block.pling
 
 spawner_storage_empty:
   message: '&#FF4444Kho của spawner đang trống.'
-  sound: block.note_block.pling
 
 action_in_progress:
   message: '&#F0C857Đã có một thao tác đang diễn ra. Vui lòng chờ.'
   action_bar: '&#F0C857Đang thực hiện thao tác. Vui lòng chờ.'
-  sound: block.note_block.pling
 
 action_failed:
   message: '&#FF4444Thao tác thất bại. Vui lòng thử lại.'
   action_bar: '&#FF4444Thao tác thất bại. Vui lòng thử lại.'
-  sound: block.note_block.pling
+
+action_not_ready:
+  message: '&#F0C857Thao tác này chưa sẵn sàng. Vui lòng thử lại sau &f{time}&#F0C857.'
+  sound: block.note_block.bass
 
 # ──────────────────────────────────────────────────────
 #             Spawner - Main GUI Interactions
 # ──────────────────────────────────────────────────────
 no_exp:
   message: '&#FF4444Không có Exp để nhận'
-  sound: block.note_block.pling
 
 exp_collected:
   message: 'Bạn đã nhận &a{exp} &fđiểm kinh nghiệm.'
   action_bar: '&a+{exp} Exp'
-  sound: entity.experience_orb.pickup
 
 exp_collected_with_mending:
   message: 'Bạn đã nhận &a{exp} &fđiểm kinh nghiệm. &c{exp_mending} &fđã được dùng để sửa đồ bằng Mending.'
   action_bar: '&a+{exp} Exp &f| &c-{exp_mending} đã dùng cho Mending'
-  sound: entity.experience_orb.pickup
 
 # ──────────────────────────────────────────────────────
 #            Spawner - Storage GUI Interactions
@@ -150,19 +147,15 @@ sneak_break_blocked:
 # ──────────────────────────────────────────────────────
 no_sellable_items:
   message: '&#FF4444Không tìm thấy vật phẩm có thể bán.'
-  sound: block.note_block.pling
 
 sell_success:
   message: 'Bạn đã bán &e{amount} &fvật phẩm với giá &a${price}&f.'
   action_bar: '&a+${price}'
-  sound: block.note_block.bell
 
 sell_and_exp_success:
   message: 'Bạn đã bán &e{amount} &fvật phẩm với giá &a${price}&f và nhận &a{exp} &fExp.'
   action_bar: '&a+${price} &f| &a+{exp} Exp'
-  sound: block.note_block.bell
 
 sell_and_exp_success_with_mending:
   message: 'Bạn đã bán &e{amount} &fvật phẩm với giá &a${price}&f, nhận &a{exp} &fExp &f(&c{exp_mending} &fđã dùng cho Mending).'
   action_bar: '&a+${price} &f| &a+{exp} Exp &f(&c-{exp_mending} Mending)'
-  sound: block.note_block.bell
