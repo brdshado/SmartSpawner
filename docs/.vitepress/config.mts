@@ -5,14 +5,14 @@ export default defineConfig({
   description: "High-performance GUI-based spawner plugin for Minecraft",
   cleanUrls: true,
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
     ['link', { rel: 'icon', type: 'image/png', href: '/logo.png' }],
     ['link', { rel: 'apple-touch-icon', href: '/logo.png' }],
   ],
   themeConfig: {
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Download', link: '/download' },
+      { text: 'Download', link: '/docs/download' },
       { text: 'Docs', link: '/docs/' }
     ],
 

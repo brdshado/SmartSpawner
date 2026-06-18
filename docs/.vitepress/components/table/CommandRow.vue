@@ -40,7 +40,7 @@ const copyToClipboard = async (text) => {
 
 <template>
   <div class="command-row">
-    <div class="left">
+    <div class="header">
       <div class="badges">
         <span
           v-for="cmd in toArray(commands)"
@@ -77,24 +77,21 @@ const copyToClipboard = async (text) => {
 
 <style scoped>
 .command-row {
-  display: grid;
-  grid-template-columns: minmax(220px, 2fr) 3fr;
-  gap: 20px 24px;
-  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 22px;
   border-bottom: 1px solid var(--vp-c-border);
-  align-items: start;
   transition: background-color 0.2s;
 }
 
 .command-row:last-child { border-bottom: none; }
 .command-row:hover { background-color: var(--vp-c-bg-mute); }
 
-.left {
+.header {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 0;
-  overflow: hidden;
 }
 
 .badges {
@@ -145,10 +142,6 @@ const copyToClipboard = async (text) => {
   background-color: var(--vp-c-indigo-soft);
   color: var(--vp-c-indigo-1);
   border: 1px solid color-mix(in srgb, var(--vp-c-indigo-1) 20%, transparent);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-  flex-shrink: 1;
 }
 
 .cmd-badge.is-copied,
@@ -195,9 +188,8 @@ const copyToClipboard = async (text) => {
 .perm-line {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
-  min-width: 0;
-  overflow: hidden;
 }
 
 .perm-label {
@@ -213,8 +205,11 @@ const copyToClipboard = async (text) => {
   font-size: 0.92rem;
   color: var(--vp-c-text-1);
   line-height: 1.65;
-  padding-top: 2px;
+  border-top: 1px dashed var(--vp-c-divider);
+  padding-top: 10px;
 }
+
+.desc :deep(p:first-child) { margin-top: 0; }
 
 .desc :deep(ul) {
   margin: 6px 0 0 0;
@@ -228,12 +223,5 @@ const copyToClipboard = async (text) => {
   background-color: var(--vp-c-default-soft);
   padding: 1px 5px;
   border-radius: 4px;
-}
-
-@media (max-width: 640px) {
-  .command-row {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
 }
 </style>
