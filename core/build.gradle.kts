@@ -85,8 +85,11 @@ tasks.shadowJar {
     archiveClassifier.set("")
 
     from(project(":api").sourceSets["main"].output)
+    from(sourceSets["main"].output)
+    from(file("build/resources/main"))
 
     configurations = listOf(shade)
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 
     relocate("com.zaxxer.hikari", "github.nighter.smartspawner.libs.hikari")
     relocate("org.mariadb.jdbc", "github.nighter.smartspawner.libs.mariadb")
@@ -96,7 +99,6 @@ tasks.shadowJar {
     exclude("META-INF/MANIFEST.MF")
     exclude("META-INF/LICENSE*")
     exclude("META-INF/NOTICE*")
-    from(sourceSets["main"].output)
     exclude("org/slf4j/**")
     mergeServiceFiles()
 

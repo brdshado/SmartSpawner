@@ -28,11 +28,17 @@ public class ItemPriceManager {
     @Getter
     private CurrencyManager currencyManager;
 
+    @Getter
     private double defaultPrice;
+    @Getter
     private PriceSourceMode priceSourceMode;
+    @Getter
     private boolean economyEnabled;
+    @Getter
     private String priceFileName;
+    @Getter
     public boolean customPricesEnabled;
+    @Getter
     public boolean shopIntegrationEnabled;
 
     public enum PriceSourceMode {
@@ -263,6 +269,12 @@ public class ItemPriceManager {
         // Currency must be available for any selling functionality
         if (currencyManager == null || !currencyManager.isCurrencyAvailable()) {
             return false;
+        }
+
+        // Check if we need to re-initialize shop integration (handles late-loading plugins)
+        if (shopIntegrationEnabled && shopIntegrationManager != null && !shopIntegrationManager.hasActiveProvider()) {
+            // Only try re-initializing if we haven't found a provider yet
+            shopIntegrationManager.initialize();
         }
 
         // At least one price source must be enabled and functional

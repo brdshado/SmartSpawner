@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.bukkit.Material;
 import org.bukkit.plugin.Plugin;
 
+import java.util.logging.Level;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -41,10 +42,15 @@ public class ShopIntegrationManager {
         // If a specific shop is configured, only try to load that one
         if (!autoDetect) {
             if (tryRegisterSpecificProvider(configuredShop)) {
-                // plugin.getLogger().info("Successfully loaded configured shop plugin: " + configuredShop);
-                return; // Stop here - we found and loaded the preferred plugin
+                plugin.getLogger().info("Successfully loaded preferred shop plugin: " + configuredShop);
+                return;
             } else {
-                plugin.getLogger().warning("Configured shop plugin '" + configuredShop + "' could not be loaded. Falling back to auto-detection.");
+                plugin.getLogger().warning("Preferred shop plugin '" + configuredShop + "' could not be loaded.");
+                plugin.getLogger().info("Available plugins: " + String.join(", ", 
+                    java.util.Arrays.stream(plugin.getServer().getPluginManager().getPlugins())
+                        .map(org.bukkit.plugin.Plugin::getName)
+                        .toArray(String[]::new)));
+                plugin.getLogger().info("Falling back to auto-detection...");
             }
         }
 
@@ -136,21 +142,40 @@ public class ShopIntegrationManager {
                     }
                     break;
                 case "bharatmc-shop":
+                case "bharatmc-sell":
+                case "bharatmcshop":
+                case "bharatmcsell":
                     if (isPluginAvailable("BharatMC-Shop")) {
                         registerProviderIfAvailable("BharatMC-Shop", () -> new BharatMCShopProvider(plugin));
                         return !availableProviders.isEmpty();
                     }
+                    if (isPluginAvailable("BharatMC-Sell")) {
+                        registerProviderIfAvailable("BharatMC-Sell", () -> new BharatMCShopProvider(plugin));
+                        return !availableProviders.isEmpty();
+                    }
                     break;
             }
-        } catch (Exception e) {
-            plugin.debug("Failed to load specific provider " + providerName + ": " + e.getMessage());
+        } catch (Throwable t) {
+            plugin.getLogger().log(Level.SEVERE, "CRITICAL error while loading specific shop provider: " + providerName, t);
         }
         return false;
     }
 
     private boolean isPluginAvailable(String pluginName) {
+        // First try direct lookup
         Plugin targetPlugin = plugin.getServer().getPluginManager().getPlugin(pluginName);
-        return targetPlugin != null && targetPlugin.isEnabled();
+        
+        // If not found, try case-insensitive search
+        if (targetPlugin == null) {
+            for (Plugin p : plugin.getServer().getPluginManager().getPlugins()) {
+                if (p.getName().equalsIgnoreCase(pluginName)) {
+                    targetPlugin = p;
+                    break;
+                }
+            }
+        }
+
+        return true;
     }
 
     private void registerProviderIfAvailable(String providerName, Supplier<ShopProvider> providerSupplier) {
@@ -168,8 +193,8 @@ public class ShopIntegrationManager {
             }
         } catch (NoClassDefFoundError e) {
             plugin.debug("Shop provider " + providerName + " classes not found (plugin not installed): " + e.getMessage());
-        } catch (Exception e) {
-            plugin.debug("Failed to initialize shop provider " + providerName + ": " + e.getMessage());
+        } catch (Throwable t) {
+            plugin.getLogger().log(Level.SEVERE, "CRITICAL: Error initializing shop integrations", t);
         }
     }
 

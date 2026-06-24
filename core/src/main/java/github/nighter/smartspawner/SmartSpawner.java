@@ -194,6 +194,17 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
 
         long loadTime = System.currentTimeMillis() - startTime;
         getLogger().info("SmartSpawner has been enabled! (Loaded in " + loadTime + "ms)");
+        
+        // Log active integrations for debugging
+        if (itemPriceManager != null) {
+            getLogger().info("Economy Enabled: " + itemPriceManager.isEconomyEnabled());
+            if (itemPriceManager.isEconomyEnabled() && itemPriceManager.getCurrencyManager() != null) {
+                getLogger().info("Currency Provider: " + itemPriceManager.getCurrencyManager().getActiveCurrencyProvider());
+            }
+            if (itemPriceManager.getShopIntegrationManager() != null) {
+                getLogger().info("Active Shop Provider: " + itemPriceManager.getShopIntegrationManager().getActiveShopPlugin());
+            }
+        }
     }
 
     @Override

@@ -100,3 +100,15 @@ tasks.withType<JavaCompile>().configureEach {
     }
 }
 
+val copyJarTask = tasks.register<Copy>("copyJar") {
+    dependsOn(":core:shadowJar")
+    from(project(":core").layout.buildDirectory.dir("libs"))
+    include("SmartSpawner-${version}.jar")
+    into(layout.buildDirectory.dir("libs"))
+}
+
+tasks.build {
+    dependsOn(copyJarTask)
+}
+
+
