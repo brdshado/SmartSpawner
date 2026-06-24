@@ -1,6 +1,3 @@
-# Configuration version – do not modify this value
-config_version: 1.6.6
-
 # TIME FORMAT GUIDE
 # Simple formats: 20s (20 seconds), 5m (5 minutes), 1h (1 hour)
 # Complex format: 1d_2h_30m_15s (1 day, 2 hours, 30 minutes, 15 seconds)
@@ -15,11 +12,11 @@ config_version: 1.6.6
 #---------------------------------------------------
 #               Language Settings
 #---------------------------------------------------
-# Language setting (available: en_US, vi_VN, de_DE, en_US_DonutSMP, en_US_DonutSMP_v2)
-language: en_US_DonutSMP_v2
+# Language setting (available: en_US, en_US_DonutSMP, en_US_DonutSMP_v2, tr_TR, vi_VN)
+language: en_US
 
 # Spawner GUI layout configuration (available: default, DonutSMP, DonutSMP_v2)
-gui_layout: DonutSMP
+gui_layout: default
 
 # Enable or disable debug mode (provides verbose console output)
 debug: false
@@ -53,7 +50,7 @@ spawner_break:
   enabled: true         # Master switch for spawner breaking feature
 
   # Whether to directly add spawner items to player inventory instead of dropping them on the ground
-  direct_to_inventory: true
+  direct_to_inventory: false
 
   # Tool Requirements - Which tools can break spawners
   required_tools:
@@ -65,9 +62,13 @@ spawner_break:
   # Durability impact on tools when breaking a spawner
   durability_loss: 1    # Number of durability points deducted
 
+  # Allow sneaking while breaking a Smart Spawner stack to remove up to 64 spawners at once.
+  # If disabled, sneaking breaks only one spawner, the same as a normal break.
+  sneak_break: true
+
   # Automatically sell storage items and claim remaining XP only when a Smart Spawner is fully removed
   # Requires sell integration + smartspawner.sellall (true by default)
-  auto_sell_and_claim_exp_on_break: true
+  sell_and_xp_break: true
 
   # Enchantment Requirements for successful spawner collection
   silk_touch:
@@ -86,27 +87,39 @@ natural_spawner:
   # If false, natural spawners will drop vanilla spawner items
   convert_to_smart_spawner: false
 
+  # Optional spawner item drop chance when natural spawners are broken.
+  # Values must be percentages from 0.0 to 100.0.
+  #
+  # Use the "default" key to set the drop chance for ALL spawner types at once.
+  # Add specific entity types only when you want to override that default.
+  # If "default" is omitted, any unspecified entity falls back to 100.0.
+  # drop_chance:
+  #   default: 80.0   # applies to every spawner type
+  #   ZOMBIE: 75.0    # override for a specific type
+  #   SKELETON: 50.0
+  #   BLAZE: 25.0
+
   # Whether natural spawners will spawn mobs
   spawn_mobs: true
 
   # Whether natural spawner block will be protected from explosions
-  protect_from_explosions: true
+  protect_from_explosions: false
 
 #---------------------------------------------------
-#                Economy Settings
+#            Storage Selling Settings
 #---------------------------------------------------
-# Economy Configuration for selling items from spawners inventory
-custom_economy:
+# Sell integration for items stored inside Smart Spawner storage
+sell_integration:
 
-  # Enable or disable selling items from spawners
+  # Enable or disable selling items from spawner storage
   enabled: true
 
-  # Supported types: VAULT, COINSENGINE (more will be added in the future)
+  # Supported types: VAULT, EXCELLENTECONOMY (more will be added in the future)
   currency: VAULT
 
-  # Specifies the name of the currency used by COINSENGINE
-  # This setting is only required when using COINSENGINE as the economy currency
-  coinsengine_currency: coins
+  # Specifies the name of the currency used by EXCELLENTECONOMY
+  # This setting is only required when using EXCELLENTECONOMY as the economy currency
+  excellenteconomy_currency: money
 
   # SHOP_ONLY:
   #   - Uses ONLY shop integration prices (e.g., ShopGUI+, EconomyShopGUI, etc.)
@@ -136,15 +149,13 @@ custom_economy:
   # Shop plugin integration
   shop_integration:
     enabled: true
-    # Supported shop plugins: auto, EconomyShopGUI, EconomyShopGUI-Premium, ShopGUIPlus, zShop, ExcellentShop
+    # Supported shop plugins: auto, EconomyShopGUI, EconomyShopGUI-Premium, ShopGUIPlus, zShop
     # 'auto' will attempt to detect your installed shop plugin automatically
-    preferred_plugin: bharatmc-shop
+    preferred_plugin: auto
 
   # Custom sell price configuration
   custom_prices:
-    enabled: false
-    # Path to custom item prices file
-    price_file_name: "item_prices.yml"
+    enabled: true
 
     # Default price for items without specific custom prices
     # Set to 0.0 to disable selling items without custom prices
@@ -174,7 +185,7 @@ bedrock_support:
 #---------------------------------------------------
 # Configure visual indicators and effects for spawners
 hologram:
-  enabled: true        # Show floating text above spawners
+  enabled: false        # Show floating text above spawners
 
   # Position Offset from spawner block center
   offset_x: 0.5
@@ -206,10 +217,7 @@ logging:
   json_format: false
   
   # Also output logs to console (useful for debugging)
-  console_output: true
-  
-  # Directory where log files are stored (relative to plugin folder)
-  log_directory: "logs"
+  console_output: false
   
   # Maximum number of log files to keep (oldest files deleted first)
   max_log_files: 10
@@ -332,3 +340,36 @@ database:
       # Time (ms) before logging a potential connection leak warning
       # Useful for debugging connection issues (0 = disabled)
       leak-detection-threshold: 0
+
+#---------------------------------------------------
+#              Performance Settings
+#---------------------------------------------------
+# Internal performance tuning for large stacked spawners.
+#
+# These settings can be reloaded without restarting.
+# Please check the docs for more details.
+performance:
+  loot_generation:
+
+    # true:
+    #   Uses exact loot simulation for small batches, then switches to
+    #   a fast average-based calculation for very large batches.
+    #   Recommended for most servers because it keeps large stacks smooth.
+    #
+    # false:
+    #   Always rolls loot exactly, one mob at a time.
+    #   This is the closest behavior to vanilla randomness, but very large
+    #   stacks can cost more CPU during loot generation.
+    approximate_loot: true
+
+    # Controls how late the plugin switches to approximation mode.
+    #
+    # Lower values:
+    #   Switch earlier, use less CPU, and trade a little precision on huge drops.
+    #
+    # Higher values:
+    #   Stay exact for longer, which preserves randomness more closely but costs
+    #   more CPU when a spawner stack generates loot for many mobs at once.
+    #
+    # Recommended: 1000-10000
+    approximation_threshold: 1000

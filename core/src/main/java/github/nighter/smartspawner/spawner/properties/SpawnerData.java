@@ -2,7 +2,6 @@ package github.nighter.smartspawner.spawner.properties;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.commands.hologram.SpawnerHologram;
-import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
 import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import github.nighter.smartspawner.spawner.sell.SellResult;
@@ -45,7 +44,7 @@ public class SpawnerData {
     private final AtomicBoolean storageDirty = new AtomicBoolean(false);
 
     // Base values from config (immutable after load)
-    @Getter @Setter
+    @Getter
     private long baseMaxStoredExp;
     @Getter @Setter
     private int baseMaxStoragePages;
@@ -239,6 +238,8 @@ public class SpawnerData {
 
     public void setSpawnDelay(long baseSpawnerDelay) {
         this.spawnDelay = baseSpawnerDelay > 0 ? baseSpawnerDelay : 500;
+        long ticksWithBuffer = this.spawnDelay > Long.MAX_VALUE - 20L ? Long.MAX_VALUE : this.spawnDelay + 20L;
+        this.cachedSpawnDelay = ticksWithBuffer > Long.MAX_VALUE / 50L ? Long.MAX_VALUE : ticksWithBuffer * 50L;
         if (baseSpawnerDelay <= 0) {
             plugin.getLogger().warning("Invalid spawner delay value. Setting to default: 500 ticks (25s)");
         }
@@ -343,7 +344,7 @@ public class SpawnerData {
     }
 
     public void setSpawnerExp(long exp) {
-        this.spawnerExp = Math.min(Math.max(0L, exp), maxStoredExp);
+        this.spawnerExp = Math.clamp(exp, 0L, maxStoredExp);
         updateHologramData();
 
         // Invalidate GUI cache when experience changes
@@ -455,7 +456,7 @@ public class SpawnerData {
     }
 
     private boolean isLootItemValid(LootItem item) {
-        ItemStack example = item.createItemStack(new Random());
+        ItemStack example = item.createItemStack();
         return example != null && !filteredItems.contains(example.getType());
     }
 
@@ -555,20 +556,17 @@ public class SpawnerData {
      * @param itemsAdded Map of item signatures to quantities added
      * @param priceCache Price cache from loot config
      */
-    public void incrementSellValue(Map<VirtualInventory.ItemSignature, Long> itemsAdded,
+    public void incrementSellValue(Map<ItemSignature, Long> itemsAdded,
                                    Map<String, Double> priceCache) {
         if (itemsAdded == null || itemsAdded.isEmpty()) {
             return;
         }
 
         double addedValue = 0.0;
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : itemsAdded.entrySet()) {
-            // Use getTemplateRef() to avoid cloning - we only need to read properties
-            ItemStack template = entry.getKey().getTemplateRef();
-            long amount = entry.getValue();
-            double itemPrice = findItemPrice(template, priceCache);
+        for (Map.Entry<ItemSignature, Long> entry : itemsAdded.entrySet()) {
+            double itemPrice = findItemPrice(entry.getKey(), priceCache);
             if (itemPrice > 0.0) {
-                addedValue += itemPrice * amount;
+                addedValue += itemPrice * entry.getValue();
             }
         }
 
@@ -587,22 +585,19 @@ public class SpawnerData {
         }
 
         // Consolidate removed items
-        Map<VirtualInventory.ItemSignature, Long> consolidated = new java.util.HashMap<>();
+        Map<ItemSignature, Long> consolidated = new java.util.HashMap<>();
         for (ItemStack item : itemsRemoved) {
             if (item == null || item.getAmount() <= 0) continue;
             // Use cached signature to avoid excessive cloning
-            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
+            ItemSignature sig = VirtualInventory.getSignature(item);
             consolidated.merge(sig, (long) item.getAmount(), (a, b) -> a + b);
         }
 
         double removedValue = 0.0;
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : consolidated.entrySet()) {
-            // Use getTemplateRef() to avoid cloning - we only need to read properties
-            ItemStack template = entry.getKey().getTemplateRef();
-            long amount = entry.getValue();
-            double itemPrice = findItemPrice(template, priceCache);
+        for (Map.Entry<ItemSignature, Long> entry : consolidated.entrySet()) {
+            double itemPrice = findItemPrice(entry.getKey(), priceCache);
             if (itemPrice > 0.0) {
-                removedValue += itemPrice * amount;
+                removedValue += itemPrice * entry.getValue();
             }
         }
 
@@ -624,16 +619,13 @@ public class SpawnerData {
         Map<String, Double> priceCache = createPriceCache();
 
         // Calculate from current inventory
-        Map<VirtualInventory.ItemSignature, Long> items = virtualInventory.getConsolidatedItems();
+        Map<ItemSignature, Long> items = virtualInventory.getConsolidatedItems();
         double totalValue = 0.0;
 
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : items.entrySet()) {
-            // Use getTemplateRef() to avoid cloning - we only need to read properties
-            ItemStack template = entry.getKey().getTemplateRef();
-            long amount = entry.getValue();
-            double itemPrice = findItemPrice(template, priceCache);
+        for (Map.Entry<ItemSignature, Long> entry : items.entrySet()) {
+            double itemPrice = findItemPrice(entry.getKey(), priceCache);
             if (itemPrice > 0.0) {
-                totalValue += itemPrice * amount;
+                totalValue += itemPrice * entry.getValue();
             }
         }
 
@@ -662,7 +654,7 @@ public class SpawnerData {
                 price = lootItem.sellPrice();
             }
             if (price > 0.0) {
-                ItemStack template = lootItem.createItemStack(new java.util.Random());
+                ItemStack template = lootItem.createItemStack();
                 if (template != null) {
                     String key = createItemKey(template);
                     cache.put(key, price);
@@ -676,45 +668,44 @@ public class SpawnerData {
     /**
      * Finds item price using the cache
      */
-    private double findItemPrice(ItemStack item, Map<String, Double> priceCache) {
-        if (item == null || priceCache == null) {
+    private double findItemPrice(ItemSignature itemSignature, Map<String, Double> priceCache) {
+        if (priceCache == null) {
             return 0.0;
         }
-        String itemKey = createItemKey(item);
+        String itemKey = createItemKey(itemSignature);
         Double price = priceCache.get(itemKey);
         return price != null ? price : 0.0;
     }
 
     /**
-     * Creates a unique key for an item (same logic as SpawnerSellManager)
+     * Convenience overload
      */
-    private String createItemKey(ItemStack item) {
-        if (item == null) {
-            return "null";
-        }
+    private String createItemKey(ItemStack itemStack) {
+        if (itemStack == null) return "null";
 
+        return createItemKey(new ItemSignature(itemStack));
+    }
+
+    /**
+     * Creates a unique key for an item (same logic as SpawnerSellManager)
+     * TODO: this feels very wrong ngl
+     */
+    private String createItemKey(ItemSignature itemSignature) {
         StringBuilder key = new StringBuilder();
-        key.append(item.getType().name());
+        key.append(itemSignature.getMaterial().name());
 
         // Add enchantments if present
-        if (item.hasItemMeta() && item.getItemMeta().hasEnchants()) {
+        ItemMeta meta = itemSignature.getUnsafeTemplateRef().getItemMeta(); // Read-only
+        if (itemSignature.hasItemMeta() && meta.hasEnchants()) {
             key.append("_enchants:");
-            item.getItemMeta().getEnchants().entrySet().stream()
+            meta.getEnchants().entrySet().stream()
                     .sorted(java.util.Map.Entry.comparingByKey(java.util.Comparator.comparing(enchantment -> enchantment.getKey().toString())))
                     .forEach(entry -> key.append(entry.getKey().getKey()).append(":").append(entry.getValue()).append(","));
         }
 
-        // Add custom model data if present
-        if (item.hasItemMeta()) {
-            ItemMeta meta = item.getItemMeta();
-            if (VersionInitializer.hasCustomModelData(meta)) {
-                key.append("_cmd:").append(VersionInitializer.getCustomModelDataString(meta));
-            }
-        }
-
         // Add display name if present
-        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-            key.append("_name:").append(item.getItemMeta().displayName());
+        if (itemSignature.hasItemMeta() && meta.hasDisplayName()) {
+            key.append("_name:").append(meta.displayName());
         }
 
         return key.toString();
@@ -735,11 +726,11 @@ public class SpawnerData {
         inventoryLock.lock();
         try {
             // Consolidate items being added for efficient price lookup
-            Map<VirtualInventory.ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
+            Map<ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
             for (ItemStack item : items) {
                 if (item == null || item.getAmount() <= 0) continue;
                 // Use cached signature to avoid excessive cloning
-                VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
+                ItemSignature sig = VirtualInventory.getSignature(item);
                 itemsToAdd.merge(sig, (long) item.getAmount(), (a, b) -> a + b);
             }
 

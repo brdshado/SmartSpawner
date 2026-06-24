@@ -1,6 +1,6 @@
 package github.nighter.smartspawner.spawner.utils;
 
-import github.nighter.smartspawner.spawner.properties.VirtualInventory;
+import github.nighter.smartspawner.spawner.properties.ItemSignature;
 import lombok.Getter;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -38,17 +38,17 @@ public class ItemStackSerializer {
         }
     }
 
-    public static List<String> serializeInventory(Map<VirtualInventory.ItemSignature, Long> items) {
+    public static List<String> serializeInventory(Map<ItemSignature, Long> items) {
         Map<Material, ItemGroup> groupedItems = new HashMap<>();
 
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : items.entrySet()) {
+        for (Map.Entry<ItemSignature, Long> entry : items.entrySet()) {
             // Use getTemplateRef() to avoid cloning - we only need to read properties
-            ItemStack template = entry.getKey().getTemplateRef();
-            Material material = template.getType();
+            ItemSignature signature = entry.getKey();
+            Material material = signature.getMaterial();
             ItemGroup group = groupedItems.computeIfAbsent(material, ItemGroup::new);
 
             if (material == Material.TIPPED_ARROW) {
-                PotionMeta meta = (PotionMeta) template.getItemMeta();
+                PotionMeta meta = (PotionMeta) signature.getUnsafeTemplateRef().getItemMeta(); // Read-only
                 if (meta != null && meta.getBasePotionType() != null) {
                     group.addPotionArrow(meta.getBasePotionType(), entry.getValue().intValue());
                 } else {
@@ -57,7 +57,7 @@ public class ItemStackSerializer {
                 }
             } else if (isDestructibleItem(material)) {
                 // Use modern damage system instead of durability
-                int damage = getDamageValue(template);
+                int damage = signature.getDamage();
                 group.addItem(damage, entry.getValue().intValue());
             } else {
                 // For non-destructible items, always use damage 0
@@ -155,16 +155,6 @@ public class ItemStackSerializer {
             }
         }
         return result;
-    }
-
-    /**
-     * Get damage value from ItemStack using modern API
-     */
-    private static int getDamageValue(ItemStack item) {
-        if (item.getItemMeta() instanceof Damageable damageable) {
-            return damageable.getDamage();
-        }
-        return 0;
     }
 
     /**

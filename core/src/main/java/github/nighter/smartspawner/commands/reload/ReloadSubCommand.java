@@ -3,6 +3,7 @@ package github.nighter.smartspawner.commands.reload;
 import com.mojang.brigadier.context.CommandContext;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.commands.BaseSubCommand;
+import github.nighter.smartspawner.config.Config;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.CommandSender;
 import org.jspecify.annotations.NullMarked;
@@ -41,7 +42,7 @@ public class ReloadSubCommand extends BaseSubCommand {
 
     private void reloadAll(CommandSender sender) {
         try {
-            plugin.getMessageService().sendMessage(sender, "reload_command_start");
+            plugin.getMessageService().sendMessage(sender, "reload.start");
 
             // Log current cache stats for debugging
             if (plugin.getConfig().getBoolean("debug", false)) {
@@ -54,6 +55,7 @@ public class ReloadSubCommand extends BaseSubCommand {
 
             // Reload all configurations
             plugin.reloadConfig();
+            Config.reload(plugin);
 
             // Reload components in dependency order
             plugin.setUpHopperHandler();
@@ -64,6 +66,7 @@ public class ReloadSubCommand extends BaseSubCommand {
 
             // Reload GUI layout config FIRST (before MenuUI and ClickManager)
             plugin.getGuiLayoutConfig().loadLayout();
+            plugin.getGuiButtonInteractionService().clear();
 
             // Then reload MenuUI and ClickManager (which depend on GUI layout)
             plugin.getSpawnerMenuUI().loadConfig();
@@ -87,11 +90,11 @@ public class ReloadSubCommand extends BaseSubCommand {
                 logCacheStats();
             }
 
-            plugin.getMessageService().sendMessage(sender, "reload_command_success");
+            plugin.getMessageService().sendMessage(sender, "reload.success");
         } catch (Exception e) {
             plugin.getLogger().severe("Error during reload: " + e.getMessage());
             e.printStackTrace();
-            plugin.getMessageService().sendMessage(sender, "reload_command_error");
+            plugin.getMessageService().sendMessage(sender, "reload.error");
         }
     }
 

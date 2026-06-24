@@ -5,6 +5,7 @@ import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.api.events.SpawnerSellEvent;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
+import github.nighter.smartspawner.spawner.properties.ItemSignature;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 
@@ -32,7 +33,15 @@ public class SpawnerSellManager {
      * Convenience overload with no completion callback.
      */
     public void sellAllItems(Player player, SpawnerData spawner) {
-        sellAllItems(player, spawner, null);
+        sellAllItems(player, spawner, null, 0, 0);
+    }
+
+    /**
+     * Sells all items from the spawner's virtual inventory.
+     * Convenience overload with completion callback but no exp data.
+     */
+    public void sellAllItems(Player player, SpawnerData spawner, Runnable onComplete) {
+        sellAllItems(player, spawner, onComplete, 0, 0);
     }
 
     /**
@@ -51,14 +60,17 @@ public class SpawnerSellManager {
      * If the sell cannot be initiated (already selling, empty inventory), {@code onComplete} is
      * invoked synchronously on the calling thread so the caller can always do cleanup.
      *
-     * @param onComplete optional callback, runs on the spawner's region/main thread after sell
-     *                   completes (success or failure that got past the CAS). Never called if
-     *                   the sell was outright rejected (CAS failed / empty).
+     * @param onComplete  optional callback, runs on the spawner's region/main thread after sell
+     *                    completes (success or failure that got past the CAS). Never called if
+     *                    the sell was outright rejected (CAS failed / empty).
+     * @param expCollected total exp that was already silently collected before this sell (for
+     *                     combined sell+exp message). Pass 0 if no exp was collected.
+     * @param expMending   amount of exp consumed by Mending (out of expCollected). Pass 0 if none.
      */
-    public void sellAllItems(Player player, SpawnerData spawner, Runnable onComplete) {
+    public void sellAllItems(Player player, SpawnerData spawner, Runnable onComplete, long expCollected, long expMending) {
         // Single atomic guard – prevents race conditions and double-sell exploits
         if (!spawner.startSelling()) {
-            messageService.sendMessage(player, "spawner_selling");
+            messageService.sendMessage(player, "action_in_progress");
             // Notify caller even on rejection so it can do its own cleanup
             if (onComplete != null) onComplete.run();
             return;
@@ -69,7 +81,7 @@ public class SpawnerSellManager {
         // Quick empty-check before any real work
         if (virtualInv.getUsedSlots() == 0) {
             spawner.stopSelling();
-            messageService.sendMessage(player, "no_items");
+            messageService.sendMessage(player, "spawner_storage_empty");
             if (onComplete != null) onComplete.run();
             return;
         }
@@ -83,7 +95,7 @@ public class SpawnerSellManager {
         spawnerGuiViewManager.closeAllViewersInventory(spawner);
 
         // Lightweight snapshot – safe because isSelling prevents concurrent inventory changes
-        final Map<VirtualInventory.ItemSignature, Long> itemSnapshot = virtualInv.getConsolidatedItems();
+        final Map<ItemSignature, Long> itemSnapshot = virtualInv.getConsolidatedItems();
         final double accumulatedValue = spawner.getAccumulatedSellValue();
         final Location spawnerLocation = spawner.getSpawnerLocation();
 
@@ -100,7 +112,7 @@ public class SpawnerSellManager {
                     } finally {
                         spawner.stopSelling();
                     }
-                    messageService.sendMessage(player, "sell_failed");
+                    messageService.sendMessage(player, "action_failed");
                 });
                 return;
             }
@@ -108,7 +120,7 @@ public class SpawnerSellManager {
             // Apply on the location's region thread (Folia) or the main thread (Paper)
             Scheduler.runLocationTask(spawnerLocation, () -> {
                 try {
-                    applySellResult(player, spawner, result);
+                    applySellResult(player, spawner, result, expCollected, expMending);
                 } finally {
                     // onComplete MUST run in finally so activeSells is always cleared,
                     // even when applySellResult throws (e.g. economy plugin error).
@@ -127,8 +139,11 @@ public class SpawnerSellManager {
      * Applies the sell result on the spawner's region/main thread.
      * Called while {@code spawner.isSelling()} is true; {@code stopSelling()} is the caller's
      * responsibility via the surrounding finally block.
+     *
+     * @param expCollected total exp already silently collected (0 = none / regular sell only)
+     * @param expMending   amount of exp consumed by Mending
      */
-    private void applySellResult(Player player, SpawnerData spawner, SellResult sellResult) {
+    private void applySellResult(Player player, SpawnerData spawner, SellResult sellResult, long expCollected, long expMending) {
         if (!sellResult.isSuccessful()) {
             messageService.sendMessage(player, "no_sellable_items");
             return;
@@ -148,7 +163,7 @@ public class SpawnerSellManager {
         // Deposit money first
         boolean depositSuccess = plugin.getItemPriceManager().getCurrencyManager().deposit(amount, player);
         if (!depositSuccess) {
-            messageService.sendMessage(player, "sell_failed");
+            messageService.sendMessage(player, "action_failed");
             return;
         }
 
@@ -171,9 +186,19 @@ public class SpawnerSellManager {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("amount", plugin.getLanguageManager().formatNumber(sellResult.getItemsSold()));
         placeholders.put("price", plugin.getLanguageManager().formatNumber(amount));
-        messageService.sendMessage(player, "sell_success", placeholders);
-        player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
 
+        if (expCollected > 0) {
+            long expGiven = expCollected - expMending;
+            placeholders.put("exp", plugin.getLanguageManager().formatNumber(expGiven));
+            if (expMending > 0) {
+                placeholders.put("exp_mending", plugin.getLanguageManager().formatNumber(expMending));
+                messageService.sendMessage(player, "sell_and_exp_success_with_mending", placeholders);
+            } else {
+                messageService.sendMessage(player, "sell_and_exp_success", placeholders);
+            }
+        } else {
+            messageService.sendMessage(player, "sell_success", placeholders);
+        }
         spawner.markLastSellAsProcessed();
     }
 
@@ -181,15 +206,15 @@ public class SpawnerSellManager {
      * Calculates the total sell value and constructs the list of {@link ItemStack}s to remove.
      * Pure computation – no Bukkit API calls, safe to run on an async thread.
      */
-    private SellResult calculateSellValue(Map<VirtualInventory.ItemSignature, Long> consolidatedItems,
+    private SellResult calculateSellValue(Map<ItemSignature, Long> consolidatedItems,
                                           double totalValue) {
         long totalItemsSold = 0;
         ArrayList<ItemStack> itemsToRemove = new ArrayList<>();
 
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : consolidatedItems.entrySet()) {
-            ItemStack templateRef = entry.getKey().getTemplateRef();
+        for (Map.Entry<ItemSignature, Long> entry : consolidatedItems.entrySet()) {
+            ItemSignature signature = entry.getKey();
             long amount = entry.getValue();
-            int maxStackSize = templateRef.getMaxStackSize();
+            int maxStackSize = signature.getMaxStackSize();
 
             totalItemsSold += amount;
 
@@ -198,7 +223,7 @@ public class SpawnerSellManager {
 
             long remaining = amount;
             while (remaining > 0) {
-                ItemStack stack = templateRef.clone();
+                ItemStack stack = signature.getTemplate();
                 stack.setAmount((int) Math.min(remaining, maxStackSize));
                 itemsToRemove.add(stack);
                 remaining -= stack.getAmount();

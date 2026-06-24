@@ -2,7 +2,7 @@ plugins {
     java
     `java-library`
     `maven-publish`
-    id("com.gradleup.shadow") version "9.4.1" apply false
+    id("com.gradleup.shadow") version "9.4.2" apply false
 }
 
 allprojects {
@@ -10,10 +10,9 @@ allprojects {
     apply(plugin = "maven-publish")
 
     group = "github.nighter"
-    version = "1.6.6"
+    version = "1.7.0"
 
     repositories {
-        mavenLocal()
         mavenCentral()
         maven {
             name = "papermc-repo"
@@ -83,32 +82,21 @@ subprojects {
     }
 }
 
-val targetJavaVersion = 21
-java {
-    val javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion.set(JavaLanguageVersion.of(targetJavaVersion))
+val targetJavaVersion = 25
+allprojects {
+    java {
+        val javaVersion = JavaVersion.toVersion(targetJavaVersion)
+        sourceCompatibility = javaVersion
+        targetCompatibility = javaVersion
+        if (JavaVersion.current() < javaVersion) {
+            toolchain.languageVersion.set(JavaLanguageVersion.of(targetJavaVersion))
+        }
+    }
+
+    tasks.withType<JavaCompile>().configureEach {
+        options.encoding = "UTF-8"
+        if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible) {
+            options.release.set(targetJavaVersion)
+        }
     }
 }
-
-tasks.withType<JavaCompile>().configureEach {
-    options.encoding = "UTF-8"
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible) {
-        options.release.set(targetJavaVersion)
-    }
-}
-
-val copyJarTask = tasks.register<Copy>("copyJar") {
-    dependsOn(":core:shadowJar")
-    from(project(":core").layout.buildDirectory.dir("libs"))
-    include("SmartSpawner-${version}.jar")
-    into(layout.buildDirectory.dir("libs"))
-}
-
-tasks.build {
-    dependsOn(copyJarTask)
-}
-
-

@@ -102,8 +102,6 @@ public class FilterConfigUI implements Listener {
         // Setup the filter inventory
         setupFilterInventory(filterInventory, spawner);
 
-        // Open the inventory for the player with appropriate sound
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
         player.openInventory(filterInventory);
     }
 
@@ -137,7 +135,7 @@ public class FilterConfigUI implements Listener {
 
         // Categorize items based on filter status
         for (LootItem lootItem : allLootItems) {
-            ItemStack displayItem = lootItem.createItemStack(new Random());
+            ItemStack displayItem = lootItem.createItemStack();
             if (displayItem == null) continue;
 
             Material itemType = displayItem.getType();
@@ -276,7 +274,7 @@ public class FilterConfigUI implements Listener {
         player.closeInventory();
 
         // Open storage UI (page 1 with no specific slot focus)
-        Inventory pageInventory = storageUI.createStorageInventory(spawner, 1, -1);
+        Inventory pageInventory = storageUI.createStorageInventory(player, spawner, 1, -1);
         player.openInventory(pageInventory);
     }
 
